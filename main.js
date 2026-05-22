@@ -1,8 +1,7 @@
-import { skills } from "./data/skills.js";
+import { skills as baseSkills } from "./data/skills.js";
 import { applyLayout } from "./data/layout.js";
 import { parentsOf } from "./data/relationships.js";
-
-applyLayout(skills);
+import { overrides as fileOverrides } from "./data/overrides.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -11,16 +10,64 @@ const edgesLayer = document.getElementById("edges-layer");
 const nodesLayer = document.getElementById("nodes-layer");
 const tooltip = document.getElementById("tooltip");
 
-const skillById = new Map(skills.map((s) => [s.id, s]));
-
 // World size matches the initial viewBox.
 const WORLD = { w: 2400, h: 1800 };
 const CX = 1200;
 const CY = 900;
 
-/**
- * Create an SVG element with the given attributes.
- */
+// ---------- Editor state (persisted to localStorage) ----------
+
+const STORAGE_KEY = "matriz-edits";
+
+function loadEditState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { overrides: {}, added: [], deleted: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      overrides: parsed.overrides ?? {},
+      added: parsed.added ?? [],
+      deleted: parsed.deleted ?? [],
+    };
+  } catch {
+    return { overrides: {}, added: [], deleted: [] };
+  }
+}
+
+function saveEditState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+const editState = loadEditState();
+
+// ---------- Pipeline: base skills -> layout -> overrides -> render ----------
+
+let skills = []; // current visible skill list
+let skillById = new Map();
+
+function rebuildSkills() {
+  // Start from a fresh deep-ish copy of base skills.
+  const base = baseSkills.map((s) => ({ ...s }));
+  applyLayout(base);
+
+  // Append added nodes (use stored x/y as-is since they were placed manually).
+  const added = editState.added.map((s) => ({ ...s }));
+  let combined = [...base, ...added];
+
+  // Drop deleted base nodes.
+  const deleted = new Set(editState.deleted);
+  combined = combined.filter((s) => !deleted.has(s.id));
+
+  // Merge overrides (file first, then localStorage on top).
+  const all = { ...fileOverrides, ...editState.overrides };
+  combined = combined.map((s) => ({ ...s, ...(all[s.id] ?? {}) }));
+
+  skills = combined;
+  skillById = new Map(skills.map((s) => [s.id, s]));
+}
+
+// ---------- SVG helpers ----------
+
 function el(name, attrs = {}, parent = null) {
   const node = document.createElementNS(SVG_NS, name);
   for (const [k, v] of Object.entries(attrs)) {
@@ -29,8 +76,6 @@ function el(name, attrs = {}, parent = null) {
   if (parent) parent.appendChild(node);
   return node;
 }
-
-// ---------- Sizing per kind ----------
 
 function getRadius(kind) {
   switch (kind) {
@@ -167,6 +212,18 @@ function drawNodes() {
   }
 }
 
+function clearLayers() {
+  while (edgesLayer.firstChild) edgesLayer.removeChild(edgesLayer.firstChild);
+  while (nodesLayer.firstChild) nodesLayer.removeChild(nodesLayer.firstChild);
+}
+
+function redraw() {
+  rebuildSkills();
+  clearLayers();
+  drawEdges();
+  drawNodes();
+}
+
 // ---------- Tooltip ----------
 
 const BRANCH_LABELS = {
@@ -201,7 +258,7 @@ function showTooltip(skill, event) {
       <span class="tooltip__badge branch-${skill.branch}">${escapeHtml(branchLabel)}</span>
       <span class="tooltip__badge tooltip__badge--kind kind-${skill.kind}">${escapeHtml(kindLabel)}</span>
     </div>
-    <p class="tooltip__desc">${escapeHtml(skill.desc)}</p>
+    <p class="tooltip__desc">${escapeHtml(skill.desc ?? "")}</p>
   `;
   tooltip.classList.add("is-visible");
   tooltip.setAttribute("aria-hidden", "false");
@@ -239,6 +296,7 @@ function highlightConnections(skill, on) {
 
 function attachHover() {
   svg.addEventListener("mouseover", (event) => {
+    if (document.body.classList.contains("is-editing")) return;
     const node = event.target.closest(".node");
     if (!node) return;
     const id = node.getAttribute("data-id");
@@ -249,6 +307,7 @@ function attachHover() {
   });
 
   svg.addEventListener("mousemove", (event) => {
+    if (document.body.classList.contains("is-editing")) return;
     if (tooltip.classList.contains("is-visible")) {
       positionTooltip(event);
     }
@@ -267,8 +326,8 @@ function attachHover() {
 // ---------- Pan & zoom (via viewBox) ----------
 
 const view = { x: 0, y: 0, w: WORLD.w, h: WORLD.h };
-const ZOOM_MIN = 0.35; // smaller w/h means zoomed in; this clamps how zoomed-in
-const ZOOM_MAX = 2.5; // larger w/h means zoomed out
+const ZOOM_MIN = 0.35;
+const ZOOM_MAX = 2.5;
 let panning = false;
 let panStart = null;
 let viewStart = null;
@@ -284,6 +343,10 @@ function clientToWorld(clientX, clientY) {
   return { x: view.x + px * view.w, y: view.y + py * view.h };
 }
 
+function viewportCenterWorld() {
+  return { x: view.x + view.w / 2, y: view.y + view.h / 2 };
+}
+
 function attachPanZoom() {
   svg.addEventListener(
     "wheel",
@@ -297,10 +360,10 @@ function attachPanZoom() {
       const newW = WORLD.w * scale;
       const newH = WORLD.h * scale;
 
-      // Keep the world point under the cursor stationary.
       const before = clientToWorld(event.clientX, event.clientY);
-      view.x = before.x - ((event.clientX - svg.getBoundingClientRect().left) / svg.getBoundingClientRect().width) * newW;
-      view.y = before.y - ((event.clientY - svg.getBoundingClientRect().top) / svg.getBoundingClientRect().height) * newH;
+      const rect = svg.getBoundingClientRect();
+      view.x = before.x - ((event.clientX - rect.left) / rect.width) * newW;
+      view.y = before.y - ((event.clientY - rect.top) / rect.height) * newH;
       view.w = newW;
       view.h = newH;
       applyView();
@@ -311,6 +374,9 @@ function attachPanZoom() {
   svg.addEventListener("mousedown", (event) => {
     if (event.target.closest(".node")) return;
     if (event.button !== 0) return;
+    // The editor may consume empty-area clicks for "create node" flows;
+    // it sets data-suppress-pan on the body in that case.
+    if (document.body.dataset.suppressPan === "1") return;
     panning = true;
     panStart = { x: event.clientX, y: event.clientY };
     viewStart = { ...view };
@@ -345,8 +411,76 @@ function attachPanZoom() {
 
 // ---------- Boot ----------
 
-drawEdges();
-drawNodes();
+redraw();
 attachHover();
 attachPanZoom();
 applyView();
+
+// ---------- Public API for the editor ----------
+
+window.tree = {
+  // State accessors
+  getSkills: () => skills,
+  getSkillById: (id) => skillById.get(id),
+  getEditState: () => editState,
+  getBaseSkills: () => baseSkills,
+  getFileOverrides: () => fileOverrides,
+
+  // Mutations (caller is responsible for calling redraw / persist as needed)
+  setOverride(id, patch) {
+    const existing = editState.overrides[id] ?? {};
+    editState.overrides[id] = { ...existing, ...patch };
+    saveEditState(editState);
+  },
+  clearOverride(id) {
+    delete editState.overrides[id];
+    saveEditState(editState);
+  },
+  addNode(node) {
+    const idx = editState.added.findIndex((s) => s.id === node.id);
+    if (idx >= 0) editState.added[idx] = node;
+    else editState.added.push(node);
+    saveEditState(editState);
+  },
+  removeAdded(id) {
+    editState.added = editState.added.filter((s) => s.id !== id);
+    saveEditState(editState);
+  },
+  isAdded(id) {
+    return editState.added.some((s) => s.id === id);
+  },
+  markDeleted(id) {
+    if (!editState.deleted.includes(id)) editState.deleted.push(id);
+    saveEditState(editState);
+  },
+  unmarkDeleted(id) {
+    editState.deleted = editState.deleted.filter((d) => d !== id);
+    saveEditState(editState);
+  },
+  resetAll() {
+    editState.overrides = {};
+    editState.added = [];
+    editState.deleted = [];
+    saveEditState(editState);
+  },
+
+  // Drawing
+  redraw,
+
+  // Geometry
+  clientToWorld,
+  viewportCenterWorld,
+  getRadius,
+  getLabelOffset,
+
+  // Layers (so the editor can patch in place during drag)
+  edgesLayer,
+  nodesLayer,
+  svg,
+
+  // Constants
+  BRANCH_LABELS,
+  KIND_LABELS,
+};
+
+window.dispatchEvent(new CustomEvent("tree:ready"));

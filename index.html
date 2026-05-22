@@ -10,7 +10,7 @@
     <main class="canvas-wrap">
       <div class="title">
         <h1>Quant Competence Matrix</h1>
-        <p class="subtitle">Circular skill tree &middot; Hover &middot; Drag &middot; Scroll zoom &middot; Double-click reset</p>
+        <p class="subtitle">Circular skill tree &middot; Hover &middot; Drag &middot; Scroll zoom &middot; Double-click reset &middot; Press <kbd>E</kbd> to edit</p>
       </div>
 
       <svg
@@ -26,8 +26,176 @@
       </svg>
 
       <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+
+      <div id="editor-toolbar" class="editor-toolbar" role="toolbar" aria-label="Editor toolbar">
+        <button
+          id="editor-toggle"
+          type="button"
+          class="editor-btn"
+          aria-pressed="false"
+          title="Toggle edit mode (E)"
+        >
+          Edit
+        </button>
+        <button
+          id="editor-add"
+          type="button"
+          class="editor-btn"
+          title="Add a new node at the viewport center"
+          disabled
+        >
+          Add node
+        </button>
+        <button
+          id="editor-export"
+          type="button"
+          class="editor-btn"
+          title="Show export snippets"
+        >
+          Export
+        </button>
+        <button
+          id="editor-reset"
+          type="button"
+          class="editor-btn editor-btn--danger"
+          title="Discard all unsaved edits"
+        >
+          Reset edits
+        </button>
+        <span id="editor-counter" class="editor-counter">no edits</span>
+      </div>
+
+      <aside id="editor-panel" class="editor-panel" aria-label="Node editor">
+        <div class="editor-panel__header">
+          <h2>Node</h2>
+          <button
+            id="editor-panel-close"
+            type="button"
+            class="editor-icon-btn"
+            aria-label="Close panel"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="editor-panel__body">
+          <label class="editor-field">
+            <span>ID</span>
+            <input id="editor-id" type="text" readonly />
+          </label>
+          <label class="editor-field">
+            <span>Label</span>
+            <input id="editor-label" type="text" />
+          </label>
+          <label class="editor-field">
+            <span>Branch</span>
+            <select id="editor-branch">
+              <option value="modeling">Modeling</option>
+              <option value="technology">Technology</option>
+              <option value="finance">Finance</option>
+              <option value="cross">Cross</option>
+            </select>
+          </label>
+          <label class="editor-field">
+            <span>Kind</span>
+            <select id="editor-kind">
+              <option value="root">Root</option>
+              <option value="hub">Hub</option>
+              <option value="detail">Detail</option>
+              <option value="cross">Cross</option>
+              <option value="apex">Apex</option>
+            </select>
+          </label>
+          <label class="editor-field">
+            <span>Description</span>
+            <textarea id="editor-desc" rows="4"></textarea>
+          </label>
+          <div class="editor-field-row">
+            <label class="editor-field">
+              <span>x</span>
+              <input id="editor-x" type="number" readonly />
+            </label>
+            <label class="editor-field">
+              <span>y</span>
+              <input id="editor-y" type="number" readonly />
+            </label>
+          </div>
+          <div class="editor-panel__actions">
+            <button id="editor-revert" type="button" class="editor-btn">
+              Revert
+            </button>
+            <button
+              id="editor-delete"
+              type="button"
+              class="editor-btn editor-btn--danger"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div
+        id="editor-export-modal"
+        class="editor-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editor-export-title"
+      >
+        <div class="editor-modal__card">
+          <div class="editor-modal__header">
+            <h2 id="editor-export-title">Export edits</h2>
+            <button
+              id="editor-export-close"
+              type="button"
+              class="editor-icon-btn"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="editor-modal__body">
+            <section class="editor-export-block">
+              <div class="editor-export-block__header">
+                <h3>data/overrides.js</h3>
+                <button
+                  id="editor-copy-overrides"
+                  type="button"
+                  class="editor-btn"
+                >
+                  Copy
+                </button>
+              </div>
+              <p class="editor-export-block__hint">
+                Replace the contents of <code>data/overrides.js</code> with this snippet.
+                <code>x</code>/<code>y</code> values here win over the auto-layout.
+              </p>
+              <textarea id="editor-export-overrides" readonly rows="14"></textarea>
+            </section>
+
+            <section class="editor-export-block">
+              <div class="editor-export-block__header">
+                <h3>data/skills.js (new nodes)</h3>
+                <button
+                  id="editor-copy-added"
+                  type="button"
+                  class="editor-btn"
+                >
+                  Copy
+                </button>
+              </div>
+              <p class="editor-export-block__hint">
+                Append these objects to the <code>skills</code> array in
+                <code>data/skills.js</code>. Wire them up by adding entries to
+                <code>data/relationships.js</code> manually.
+              </p>
+              <textarea id="editor-export-added" readonly rows="10"></textarea>
+            </section>
+          </div>
+        </div>
+      </div>
     </main>
 
     <script type="module" src="main.js"></script>
+    <script type="module" src="editor.js"></script>
   </body>
 </html>
