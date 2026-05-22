@@ -14,6 +14,7 @@
  */
 
 export const overrides = {
+  "math-real-analysis": { x: 1562, y: 354 },
   "opt-mip": { x: 801, y: 662 },
   "opt-numerical": { x: 915, y: 663 },
   "opt-stochastic": { x: 843, y: 587 },
@@ -40,8 +41,16 @@ export const addedNodes = [
   },
 ];
 
-export const deletedIds = [];
+export const deletedIds = [
+  "backend-langs",
+];
 
-export const addedEdges = [];
+export const addedEdges = [
+  { from: "backend-db-nosql", to: "backend-microservices" },
+  { from: "math-real-analysis", to: "stats-bayesian" },
+  { from: "math-real-analysis", to: "stats-timeseries" },
+  { from: "stoc-poisson", to: "opt-numerical" },
+];
 
-export const deletedEdges = [];
+export const deletedEdges = [
+];
