@@ -76,10 +76,7 @@ Edges/relationships are intentionally **not** editable from the UI. Edit `data/r
 
 ### Persistence
 
-All edits live in `localStorage` under the key `matriz-edits`. Reload-safe across sessions, but cleared by:
-
-- Clicking **Reset edits** in the toolbar.
-- Manually clearing site data.
+All edits live in `localStorage` under the key `matriz-edits` and are reload-safe across sessions. Every change you make in the editor is structural and persisted automatically — there is no per-session "discard" button. To start clean, paste your edits into source via **Export** (and clear the browser's site data if you want a blank slate).
 
 ### Export to repo
 
@@ -88,7 +85,7 @@ Click **Export** to open a modal with two snippets:
 1. **`data/overrides.js`** — paste over the file’s contents to commit your manual positions and metadata. Values here win over `data/layout.js`.
 2. **`data/skills.js` (new nodes)** — append the listed objects to the `skills` array. Wire them up in `data/relationships.js` afterwards.
 
-Once you’ve pasted both into source and reloaded, you can clear the unsaved edits via **Reset edits** (the file overrides keep applying without the browser state).
+Once you’ve pasted both into source and reloaded, the file overrides keep applying. If you also want to drop the now-redundant browser state, clear site data manually.
 
 ### Out of scope
 

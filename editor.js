@@ -23,7 +23,6 @@ function initEditor() {
   const toggleBtn = document.getElementById("editor-toggle");
   const addBtn = document.getElementById("editor-add");
   const exportBtn = document.getElementById("editor-export");
-  const resetBtn = document.getElementById("editor-reset");
   const counter = document.getElementById("editor-counter");
 
   const panel = document.getElementById("editor-panel");
@@ -342,12 +341,6 @@ function initEditor() {
   copyAddedBtn.addEventListener("click", () =>
     copyText(modalAddedText, copyAddedBtn)
   );
-
-  resetBtn.addEventListener("click", () => {
-    if (!confirm("Discard all unsaved edits and reload?")) return;
-    tree.resetAll();
-    location.reload();
-  });
 
   // ---------- Side panel inputs ----------
 
