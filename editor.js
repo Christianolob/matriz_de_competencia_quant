@@ -7,8 +7,7 @@
  *  - "Add node" creates a new circle at the viewport center.
  *  - The side panel lets you edit label, branch, kind, description.
  *  - Delete removes the node (added nodes are erased; base nodes are tombstoned).
- *  - Export opens a modal with snippets to paste into data/overrides.js and data/skills.js.
- *  - Reset edits clears localStorage and reloads.
+ *  - "Code" toggles a left-side live preview of data/overrides.js with a Copy button.
  *
  * Edges (relationships) are not editable from the UI on purpose -- edit
  * data/relationships.js directly in your code editor.
@@ -22,8 +21,7 @@ function initEditor() {
   const toolbar = document.getElementById("editor-toolbar");
   const toggleBtn = document.getElementById("editor-toggle");
   const addBtn = document.getElementById("editor-add");
-  const exportBtn = document.getElementById("editor-export");
-  const counter = document.getElementById("editor-counter");
+  const codeToggleBtn = document.getElementById("editor-code-toggle");
 
   const panel = document.getElementById("editor-panel");
   const panelClose = document.getElementById("editor-panel-close");
@@ -37,12 +35,10 @@ function initEditor() {
   const deleteBtn = document.getElementById("editor-delete");
   const revertBtn = document.getElementById("editor-revert");
 
-  const modal = document.getElementById("editor-export-modal");
-  const modalClose = document.getElementById("editor-export-close");
-  const modalOverridesText = document.getElementById("editor-export-overrides");
-  const modalAddedText = document.getElementById("editor-export-added");
-  const copyOverridesBtn = document.getElementById("editor-copy-overrides");
-  const copyAddedBtn = document.getElementById("editor-copy-added");
+  const codePanel = document.getElementById("editor-code-panel");
+  const codePanelClose = document.getElementById("editor-code-close");
+  const codeText = document.getElementById("editor-code-text");
+  const codeCopyBtn = document.getElementById("editor-code-copy");
 
   if (!toolbar || !toggleBtn) return; // UI not present, do nothing.
 
@@ -50,7 +46,7 @@ function initEditor() {
 
   let editing = false;
   let selectedId = null;
-  let dragging = null; // { id, started: bool, lastX, lastY }
+  let dragging = null;
   let lastBranch = "modeling";
   let suppressNextClick = false;
 
@@ -62,14 +58,6 @@ function initEditor() {
 
   function isFromBase(id) {
     return tree.getBaseSkills().some((s) => s.id === id);
-  }
-
-  function refreshCounter() {
-    const st = tree.getEditState();
-    const n =
-      Object.keys(st.overrides).length + st.added.length + st.deleted.length;
-    counter.textContent = n === 0 ? "no edits" : `${n} edit${n > 1 ? "s" : ""}`;
-    counter.classList.toggle("is-dirty", n > 0);
   }
 
   function setEditing(on) {
@@ -140,11 +128,22 @@ function initEditor() {
     if (!node) return;
 
     const id = node.getAttribute("data-id");
+    const skill = tree.getSkillById(id);
+    if (!skill) return;
+
     event.stopPropagation();
     event.preventDefault();
     body.dataset.suppressPan = "1";
 
-    dragging = { id, started: false, startX: event.clientX, startY: event.clientY };
+    const world = tree.clientToWorld(event.clientX, event.clientY);
+    dragging = {
+      id,
+      started: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: skill.x - world.x,
+      offsetY: skill.y - world.y,
+    };
     selectNode(id);
   });
 
@@ -156,7 +155,11 @@ function initEditor() {
     dragging.started = true;
 
     const world = tree.clientToWorld(event.clientX, event.clientY);
-    moveNodeTo(dragging.id, Math.round(world.x), Math.round(world.y));
+    moveNodeTo(
+      dragging.id,
+      Math.round(world.x + dragging.offsetX),
+      Math.round(world.y + dragging.offsetY)
+    );
   });
 
   window.addEventListener("mouseup", () => {
@@ -171,19 +174,18 @@ function initEditor() {
       const skill = tree.getSkillById(id);
       if (skill) {
         if (isAddedId(id)) {
-          // Mutate the stored added node directly.
           const st = tree.getEditState();
           const stored = st.added.find((s) => s.id === id);
           if (stored) {
             stored.x = skill.x;
             stored.y = skill.y;
-            tree.addNode(stored); // re-saves to localStorage
+            tree.addNode(stored);
           }
         } else {
           tree.setOverride(id, { x: skill.x, y: skill.y });
         }
-        refreshCounter();
         fillPanel(id);
+        refreshCodePanel();
       }
     }
   });
@@ -194,7 +196,6 @@ function initEditor() {
     skill.x = x;
     skill.y = y;
 
-    // Update node visuals.
     const g = tree.nodesLayer.querySelector(`[data-id="${cssEscape(id)}"]`);
     if (g) {
       const circle = g.querySelector("circle");
@@ -212,7 +213,6 @@ function initEditor() {
       }
     }
 
-    // Update connected edges.
     const edges = tree.edgesLayer.querySelectorAll(
       `[data-from="${cssEscape(id)}"], [data-to="${cssEscape(id)}"]`
     );
@@ -228,13 +228,10 @@ function initEditor() {
         edge.setAttribute("x2", String(to.x));
         edge.setAttribute("y2", String(to.y));
       } else {
-        // Path (root->hub arc): easier to redraw the whole tree on next idle,
-        // but during drag we just trigger a full redraw which preserves selection.
         scheduleFullRedraw();
       }
     });
 
-    // Live-update inputs in the panel if this node is selected.
     if (selectedId === id) {
       inputX.value = String(x);
       inputY.value = String(y);
@@ -293,11 +290,7 @@ function initEditor() {
       setEditing(!editing);
     }
     if (event.key === "Escape") {
-      if (modal.classList.contains("is-open")) {
-        modal.classList.remove("is-open");
-      } else {
-        clearSelection();
-      }
+      clearSelection();
     }
   });
 
@@ -323,24 +316,9 @@ function initEditor() {
     };
     tree.addNode(node);
     tree.redraw();
-    refreshCounter();
     selectNode(id);
+    refreshCodePanel();
   });
-
-  exportBtn.addEventListener("click", openExportModal);
-  modalClose.addEventListener("click", () =>
-    modal.classList.remove("is-open")
-  );
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) modal.classList.remove("is-open");
-  });
-
-  copyOverridesBtn.addEventListener("click", () =>
-    copyText(modalOverridesText, copyOverridesBtn)
-  );
-  copyAddedBtn.addEventListener("click", () =>
-    copyText(modalAddedText, copyAddedBtn)
-  );
 
   // ---------- Side panel inputs ----------
 
@@ -380,8 +358,8 @@ function initEditor() {
       );
       if (node) node.classList.add("is-selected");
     }
-    refreshCounter();
     fillPanel(id);
+    refreshCodePanel();
   }
 
   panelClose.addEventListener("click", clearSelection);
@@ -396,13 +374,12 @@ function initEditor() {
     }
     clearSelection();
     tree.redraw();
-    refreshCounter();
+    refreshCodePanel();
   });
 
   revertBtn.addEventListener("click", () => {
     if (!selectedId) return;
     if (isAddedId(selectedId)) {
-      // For added nodes, "revert" means delete entirely.
       tree.removeAdded(selectedId);
       clearSelection();
     } else {
@@ -410,16 +387,15 @@ function initEditor() {
       tree.unmarkDeleted(selectedId);
     }
     tree.redraw();
-    refreshCounter();
     if (selectedId) fillPanel(selectedId);
+    refreshCodePanel();
   });
 
-  // ---------- Export modal ----------
+  // ---------- Live code panel ----------
 
-  function openExportModal() {
-    modalOverridesText.value = buildOverridesFile();
-    modalAddedText.value = buildAddedSnippet();
-    modal.classList.add("is-open");
+  function refreshCodePanel() {
+    if (!codeText) return;
+    codeText.value = buildOverridesFile();
   }
 
   function buildOverridesFile() {
@@ -458,36 +434,24 @@ function initEditor() {
     return lines.join("\n");
   }
 
-  function buildAddedSnippet() {
-    const st = tree.getEditState();
-    if (!st.added.length) {
-      return "// No new nodes to append.\n";
-    }
-    const lines = [
-      "// Append these objects to the `skills` array in data/skills.js:",
-      "",
-    ];
-    for (const s of st.added) {
-      lines.push("{");
-      lines.push(`  id: ${JSON.stringify(s.id)},`);
-      lines.push(`  label: ${JSON.stringify(s.label ?? "")},`);
-      lines.push(`  branch: ${JSON.stringify(s.branch ?? "modeling")},`);
-      lines.push(`  kind: ${JSON.stringify(s.kind ?? "detail")},`);
-      lines.push(`  x: ${Math.round(s.x ?? 0)},`);
-      lines.push(`  y: ${Math.round(s.y ?? 0)},`);
-      lines.push(`  desc: ${JSON.stringify(s.desc ?? "")},`);
-      lines.push(`  prereqs: [],`);
-      lines.push("},");
-    }
-    if (st.deleted.length) {
-      lines.push("");
-      lines.push("// Also remove these ids from data/skills.js (or keep");
-      lines.push("// the tombstone in data/overrides.js as `deleted`):");
-      for (const id of st.deleted) {
-        lines.push(`//   ${id}`);
-      }
-    }
-    return lines.join("\n") + "\n";
+  if (codeToggleBtn) {
+    codeToggleBtn.addEventListener("click", () => {
+      const willOpen = !codePanel.classList.contains("is-open");
+      codePanel.classList.toggle("is-open", willOpen);
+      codeToggleBtn.setAttribute("aria-pressed", String(willOpen));
+      if (willOpen) refreshCodePanel();
+    });
+  }
+  if (codePanelClose) {
+    codePanelClose.addEventListener("click", () => {
+      codePanel.classList.remove("is-open");
+      if (codeToggleBtn) codeToggleBtn.setAttribute("aria-pressed", "false");
+    });
+  }
+  if (codeCopyBtn) {
+    codeCopyBtn.addEventListener("click", () =>
+      copyText(codeText, codeCopyBtn)
+    );
   }
 
   function copyText(textarea, button) {
@@ -505,7 +469,7 @@ function initEditor() {
   // ---------- Boot ----------
 
   setEditing(false);
-  refreshCounter();
+  refreshCodePanel();
 }
 
 if (window.tree) {

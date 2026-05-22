@@ -17,7 +17,7 @@ Double-click `run.bat`, or `python -m http.server 8000` → `http://localhost:80
 ```
   index.html
   main.js                # render + pan/zoom + tooltip + tree API
-  editor.js              # edit mode (drag, CRUD, panel, export)
+  editor.js              # edit mode (drag, CRUD, side panel, live code panel)
   styles.css
   data/skills.js         # base node metadata
   data/relationships.js  # explicit graph edges (nearby parent-child links)
@@ -62,7 +62,7 @@ The tree ships with an in-app editor for tweaking node positions and metadata wi
 ### Toggle
 
 - Press **`E`** or click the **Edit** button (bottom-left toolbar).
-- The toolbar shows an unsaved-edits counter; the side panel slides in when a node is selected.
+- The right-side panel slides in when a node is selected; the left-side **Code** panel mirrors `data/overrides.js` live.
 
 ### Operations
 
@@ -76,18 +76,16 @@ Edges/relationships are intentionally **not** editable from the UI. Edit `data/r
 
 ### Persistence
 
-All edits live in `localStorage` under the key `matriz-edits` and are reload-safe across sessions. Every change you make in the editor is structural and persisted automatically — there is no per-session "discard" button. To start clean, paste your edits into source via **Export** (and clear the browser's site data if you want a blank slate).
+All edits live in `localStorage` under the key `matriz-edits` and are reload-safe across sessions. Every change is structural and persisted automatically — there is no per-session "discard" button. To start clean, commit your edits via the **Code** panel and clear the browser's site data if you want a blank slate.
 
-### Export to repo
+### Live overrides code
 
-Click **Export** to open a modal with two snippets:
+Click **Code** in the toolbar to slide in a left-side panel showing the live `data/overrides.js` content. The textarea updates after every drag, metadata edit, add or delete. Click **Copy** and paste over `data/overrides.js` to commit your changes — the file overrides keep applying after reload.
 
-1. **`data/overrides.js`** — paste over the file’s contents to commit your manual positions and metadata. Values here win over `data/layout.js`.
-2. **`data/skills.js` (new nodes)** — append the listed objects to the `skills` array. Wire them up in `data/relationships.js` afterwards.
-
-Once you’ve pasted both into source and reloaded, the file overrides keep applying. If you also want to drop the now-redundant browser state, clear site data manually.
+New nodes you create via **Add node** stay in `localStorage` (they are not exported as code). To promote a custom node into source, copy its data manually into `data/skills.js` and add edges in `data/relationships.js` if needed.
 
 ### Out of scope
 
 - Editing edges via the UI.
+- Exporting newly added nodes as a code snippet.
 - Undo/redo, multi-select, snap-to-grid, touch input.

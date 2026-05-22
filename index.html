@@ -47,14 +47,14 @@
           Add node
         </button>
         <button
-          id="editor-export"
+          id="editor-code-toggle"
           type="button"
           class="editor-btn"
-          title="Show export snippets"
+          aria-pressed="false"
+          title="Toggle the live data/overrides.js code panel"
         >
-          Export
+          Code
         </button>
-        <span id="editor-counter" class="editor-counter">no edits</span>
       </div>
 
       <aside id="editor-panel" class="editor-panel" aria-label="Node editor">
@@ -126,65 +126,31 @@
         </div>
       </aside>
 
-      <div
-        id="editor-export-modal"
-        class="editor-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="editor-export-title"
+      <aside
+        id="editor-code-panel"
+        class="editor-code-panel"
+        aria-label="Live overrides.js code"
       >
-        <div class="editor-modal__card">
-          <div class="editor-modal__header">
-            <h2 id="editor-export-title">Export edits</h2>
+        <div class="editor-code-panel__header">
+          <h2>data/overrides.js</h2>
+          <div class="editor-code-panel__header-actions">
+            <button id="editor-code-copy" type="button" class="editor-btn">
+              Copy
+            </button>
             <button
-              id="editor-export-close"
+              id="editor-code-close"
               type="button"
               class="editor-icon-btn"
-              aria-label="Close"
+              aria-label="Close code panel"
             >
               &times;
             </button>
           </div>
-          <div class="editor-modal__body">
-            <section class="editor-export-block">
-              <div class="editor-export-block__header">
-                <h3>data/overrides.js</h3>
-                <button
-                  id="editor-copy-overrides"
-                  type="button"
-                  class="editor-btn"
-                >
-                  Copy
-                </button>
-              </div>
-              <p class="editor-export-block__hint">
-                Replace the contents of <code>data/overrides.js</code> with this snippet.
-                <code>x</code>/<code>y</code> values here win over the auto-layout.
-              </p>
-              <textarea id="editor-export-overrides" readonly rows="14"></textarea>
-            </section>
-
-            <section class="editor-export-block">
-              <div class="editor-export-block__header">
-                <h3>data/skills.js (new nodes)</h3>
-                <button
-                  id="editor-copy-added"
-                  type="button"
-                  class="editor-btn"
-                >
-                  Copy
-                </button>
-              </div>
-              <p class="editor-export-block__hint">
-                Append these objects to the <code>skills</code> array in
-                <code>data/skills.js</code>. Wire them up by adding entries to
-                <code>data/relationships.js</code> manually.
-              </p>
-              <textarea id="editor-export-added" readonly rows="10"></textarea>
-            </section>
-          </div>
         </div>
-      </div>
+        <div class="editor-code-panel__body">
+          <textarea id="editor-code-text" readonly spellcheck="false"></textarea>
+        </div>
+      </aside>
     </main>
 
     <script type="module" src="main.js"></script>
