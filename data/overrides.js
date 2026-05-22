@@ -1,30 +1,24 @@
 /**
  * Full edit state of the skill tree, persisted to source.
  *
- * Auto-saved by the in-app editor (server.py / run.bat). Three exports
- * cover the complete state:
+ * The in-app editor (toggle with key "E") rewrites this file via the local
+ * server (server.py / run.bat) on every edit. Commit the file and any clone
+ * of the repo will reproduce the exact same tree.
  *
- *   overrides   -- per base-node diff (subset of x, y, label, branch, kind, desc)
- *   addedNodes  -- full skill objects created with the Add node button
- *   deletedIds  -- ids of base nodes hidden from the render
+ * Three exports cover the complete state:
  *
- * Commit this file and any clone reproduces the same tree.
+ *   overrides   -- per base-node diff. Any subset of
+ *                  { x, y, label, branch, kind, desc } wins over the auto-layout.
+ *
+ *   addedNodes  -- full skill objects created with the "Add node" button.
+ *                  Shape: { id, label, branch, kind, x, y, desc }.
+ *
+ *   deletedIds  -- ids of base nodes (from data/skills.js) that should be
+ *                  hidden from the render.
  */
 
-export const overrides = {
-};
+export const overrides = {};
 
-export const addedNodes = [
-  {
-    id: "custom-modeling-1",
-    label: "New skill",
-    branch: "modeling",
-    kind: "detail",
-    x: 900,
-    y: 670,
-    desc: "",
-  },
-];
+export const addedNodes = [];
 
-export const deletedIds = [
-];
+export const deletedIds = [];
