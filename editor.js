@@ -3,11 +3,14 @@
  *
  * Toggle with the "E" key or the toolbar button. While in edit mode:
  *  - Click a node to select it; the side panel shows its metadata.
- *  - Drag a node to move it (writes a position override).
+ *  - Drag a node to move it.
  *  - "Add node" creates a new circle at the viewport center.
  *  - The side panel lets you edit label, branch, kind, description.
  *  - Delete removes the node (added nodes are erased; base nodes are tombstoned).
- *  - "Code" toggles a left-side live preview of data/overrides.js with a Copy button.
+ *
+ * Every edit auto-saves to data/overrides.js via the local server (server.py).
+ * The full state -- overrides, addedNodes, deletedIds -- lives in that one
+ * file, so committing it is enough to reproduce the tree on any clone.
  *
  * Edges (relationships) are not editable from the UI on purpose -- edit
  * data/relationships.js directly in your code editor.
@@ -21,7 +24,6 @@ function initEditor() {
   const toolbar = document.getElementById("editor-toolbar");
   const toggleBtn = document.getElementById("editor-toggle");
   const addBtn = document.getElementById("editor-add");
-  const codeToggleBtn = document.getElementById("editor-code-toggle");
 
   const panel = document.getElementById("editor-panel");
   const panelClose = document.getElementById("editor-panel-close");
@@ -35,11 +37,13 @@ function initEditor() {
   const deleteBtn = document.getElementById("editor-delete");
   const revertBtn = document.getElementById("editor-revert");
 
-  const codePanel = document.getElementById("editor-code-panel");
-  const codePanelClose = document.getElementById("editor-code-close");
-  const codeText = document.getElementById("editor-code-text");
-  const codeCopyBtn = document.getElementById("editor-code-copy");
-  const codeStatus = document.getElementById("editor-code-status");
+  const errorBanner = document.getElementById("editor-save-error");
+  const errorText = errorBanner
+    ? errorBanner.querySelector(".editor-save-error__text")
+    : null;
+  const errorRetry = errorBanner
+    ? errorBanner.querySelector(".editor-save-error__retry")
+    : null;
 
   if (!toolbar || !toggleBtn) return; // UI not present, do nothing.
 
@@ -175,8 +179,9 @@ function initEditor() {
       const skill = tree.getSkillById(id);
       if (skill) {
         if (isAddedId(id)) {
-          const st = tree.getEditState();
-          const stored = st.added.find((s) => s.id === id);
+          const stored = tree
+            .getEditState()
+            .added.find((s) => s.id === id);
           if (stored) {
             stored.x = skill.x;
             stored.y = skill.y;
@@ -186,7 +191,7 @@ function initEditor() {
           tree.setOverride(id, { x: skill.x, y: skill.y });
         }
         fillPanel(id);
-        refreshCodePanel();
+        scheduleSave();
       }
     }
   });
@@ -313,12 +318,11 @@ function initEditor() {
       x: Math.round(center.x),
       y: Math.round(center.y),
       desc: "",
-      prereqs: [],
     };
     tree.addNode(node);
     tree.redraw();
     selectNode(id);
-    refreshCodePanel();
+    scheduleSave();
   });
 
   // ---------- Side panel inputs ----------
@@ -343,8 +347,7 @@ function initEditor() {
 
   function applyMetadataEdit(id, patch) {
     if (isAddedId(id)) {
-      const st = tree.getEditState();
-      const stored = st.added.find((s) => s.id === id);
+      const stored = tree.getEditState().added.find((s) => s.id === id);
       if (stored) {
         Object.assign(stored, patch);
         tree.addNode(stored);
@@ -360,7 +363,7 @@ function initEditor() {
       if (node) node.classList.add("is-selected");
     }
     fillPanel(id);
-    refreshCodePanel();
+    scheduleSave();
   }
 
   panelClose.addEventListener("click", clearSelection);
@@ -375,7 +378,7 @@ function initEditor() {
     }
     clearSelection();
     tree.redraw();
-    refreshCodePanel();
+    scheduleSave();
   });
 
   revertBtn.addEventListener("click", () => {
@@ -389,23 +392,17 @@ function initEditor() {
     }
     tree.redraw();
     if (selectedId) fillPanel(selectedId);
-    refreshCodePanel();
+    scheduleSave();
   });
 
-  // ---------- Live code panel + auto-save ----------
+  // ---------- Auto-save ----------
 
   let saveTimer = null;
   let saveInFlight = false;
   let pendingAfterFlight = false;
 
-  function refreshCodePanel({ skipAutosave = false } = {}) {
-    if (codeText) codeText.value = buildOverridesFile();
-    if (!skipAutosave) scheduleSave();
-  }
-
   function scheduleSave() {
     if (saveTimer) clearTimeout(saveTimer);
-    setStatus("dirty", "Saving...");
     saveTimer = setTimeout(saveNow, 400);
   }
 
@@ -417,7 +414,6 @@ function initEditor() {
     }
     const body = buildOverridesFile();
     saveInFlight = true;
-    setStatus("saving", "Saving...");
     try {
       const res = await fetch("data/overrides.js", {
         method: "PUT",
@@ -425,13 +421,11 @@ function initEditor() {
         body,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setStatus("saved", `Saved ${formatTime(new Date())}`);
+      hideError();
+      tree.clearPending();
     } catch (err) {
-      const hint =
-        err && err.message
-          ? `Save failed (${err.message}). Run via run.bat to enable saving.`
-          : "Save failed. Run via run.bat to enable saving.";
-      setStatus("error", hint);
+      tree.persistPending();
+      showError(err);
     } finally {
       saveInFlight = false;
       if (pendingAfterFlight) {
@@ -441,36 +435,48 @@ function initEditor() {
     }
   }
 
-  function setStatus(kind, text) {
-    if (!codeStatus) return;
-    codeStatus.dataset.state = kind;
-    codeStatus.textContent = text;
+  function showError(err) {
+    if (!errorBanner) return;
+    const detail = err && err.message ? ` (${err.message})` : "";
+    if (errorText) {
+      errorText.textContent = `Save to data/overrides.js failed${detail}. Run via run.bat to enable saving.`;
+    }
+    errorBanner.hidden = false;
   }
 
-  function formatTime(d) {
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    const ss = String(d.getSeconds()).padStart(2, "0");
-    return `${hh}:${mm}:${ss}`;
+  function hideError() {
+    if (!errorBanner) return;
+    errorBanner.hidden = true;
+  }
+
+  if (errorRetry) {
+    errorRetry.addEventListener("click", () => {
+      saveNow();
+    });
   }
 
   function buildOverridesFile() {
     const st = tree.getEditState();
-    const fileOv = tree.getFileOverrides();
-    const merged = { ...fileOv, ...st.overrides };
-
     const lines = [
       "/**",
-      " * Manual position and metadata overrides for the skill tree.",
-      " * Auto-saved by the in-app editor; safe to edit by hand.",
+      " * Full edit state of the skill tree, persisted to source.",
+      " *",
+      " * Auto-saved by the in-app editor (server.py / run.bat). Three exports",
+      " * cover the complete state:",
+      " *",
+      " *   overrides   -- per base-node diff (subset of x, y, label, branch, kind, desc)",
+      " *   addedNodes  -- full skill objects created with the Add node button",
+      " *   deletedIds  -- ids of base nodes hidden from the render",
+      " *",
+      " * Commit this file and any clone reproduces the same tree.",
       " */",
       "",
       "export const overrides = {",
     ];
 
-    const ids = Object.keys(merged).sort();
+    const ids = Object.keys(st.overrides ?? {}).sort();
     for (const id of ids) {
-      const v = merged[id];
+      const v = st.overrides[id];
       const parts = [];
       if (typeof v.x === "number") parts.push(`x: ${v.x}`);
       if (typeof v.y === "number") parts.push(`y: ${v.y}`);
@@ -485,48 +491,39 @@ function initEditor() {
       if (parts.length === 0) continue;
       lines.push(`  ${JSON.stringify(id)}: { ${parts.join(", ")} },`);
     }
-
     lines.push("};", "");
-    return lines.join("\n");
-  }
 
-  if (codeToggleBtn) {
-    codeToggleBtn.addEventListener("click", () => {
-      const willOpen = !codePanel.classList.contains("is-open");
-      codePanel.classList.toggle("is-open", willOpen);
-      codeToggleBtn.setAttribute("aria-pressed", String(willOpen));
-      if (willOpen) refreshCodePanel({ skipAutosave: true });
-    });
-  }
-  if (codePanelClose) {
-    codePanelClose.addEventListener("click", () => {
-      codePanel.classList.remove("is-open");
-      if (codeToggleBtn) codeToggleBtn.setAttribute("aria-pressed", "false");
-    });
-  }
-  if (codeCopyBtn) {
-    codeCopyBtn.addEventListener("click", () =>
-      copyText(codeText, codeCopyBtn)
-    );
-  }
-
-  function copyText(textarea, button) {
-    textarea.select();
-    try {
-      navigator.clipboard.writeText(textarea.value);
-    } catch {
-      document.execCommand("copy");
+    const added = (st.added ?? [])
+      .slice()
+      .sort((a, b) => a.id.localeCompare(b.id));
+    lines.push("export const addedNodes = [");
+    for (const node of added) {
+      lines.push("  {");
+      lines.push(`    id: ${JSON.stringify(node.id)},`);
+      lines.push(`    label: ${JSON.stringify(node.label ?? "")},`);
+      lines.push(`    branch: ${JSON.stringify(node.branch ?? "modeling")},`);
+      lines.push(`    kind: ${JSON.stringify(node.kind ?? "detail")},`);
+      lines.push(`    x: ${Math.round(node.x ?? 0)},`);
+      lines.push(`    y: ${Math.round(node.y ?? 0)},`);
+      lines.push(`    desc: ${JSON.stringify(node.desc ?? "")},`);
+      lines.push("  },");
     }
-    const original = button.textContent;
-    button.textContent = "Copied";
-    setTimeout(() => (button.textContent = original), 1200);
+    lines.push("];", "");
+
+    const deleted = (st.deleted ?? []).slice().sort();
+    lines.push("export const deletedIds = [");
+    for (const id of deleted) {
+      lines.push(`  ${JSON.stringify(id)},`);
+    }
+    lines.push("];", "");
+
+    return lines.join("\n");
   }
 
   // ---------- Boot ----------
 
   setEditing(false);
-  refreshCodePanel({ skipAutosave: true });
-  setStatus("idle", "Auto-save ready");
+  hideError();
 }
 
 if (window.tree) {

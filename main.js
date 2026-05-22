@@ -1,7 +1,11 @@
 import { skills as baseSkills } from "./data/skills.js";
 import { applyLayout } from "./data/layout.js";
 import { parentsOf } from "./data/relationships.js";
-import { overrides as fileOverrides } from "./data/overrides.js";
+import {
+  overrides as fileOverrides,
+  addedNodes as fileAddedNodes,
+  deletedIds as fileDeletedIds,
+} from "./data/overrides.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -15,32 +19,62 @@ const WORLD = { w: 2400, h: 1800 };
 const CX = 1200;
 const CY = 900;
 
-// ---------- Editor state (persisted to localStorage) ----------
+// ---------- Editor state ----------
+//
+// The committed source of truth is `data/overrides.js`. localStorage is
+// used only as a fallback while the local server is unreachable: when a
+// PUT fails, the editor writes the in-memory state there with
+// `pending: true`. On the next page load, that pending state wins so no
+// edit is lost; once a save succeeds, the editor clears localStorage.
 
 const STORAGE_KEY = "matriz-edits";
+
+function fileEditState() {
+  return {
+    overrides: { ...(fileOverrides ?? {}) },
+    added: (fileAddedNodes ?? []).map((s) => ({ ...s })),
+    deleted: [...(fileDeletedIds ?? [])],
+  };
+}
 
 function loadEditState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { overrides: {}, added: [], deleted: [] };
+    if (!raw) return fileEditState();
     const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.pending) return fileEditState();
     return {
       overrides: parsed.overrides ?? {},
       added: parsed.added ?? [],
       deleted: parsed.deleted ?? [],
     };
   } catch {
-    return { overrides: {}, added: [], deleted: [] };
+    return fileEditState();
   }
 }
 
-function saveEditState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function persistPending() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ pending: true, ...editState })
+    );
+  } catch {
+    // localStorage may be disabled; nothing else we can do.
+  }
+}
+
+function clearPending() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 const editState = loadEditState();
 
-// ---------- Pipeline: base skills -> layout -> overrides -> render ----------
+// ---------- Pipeline: base skills -> layout -> editState -> render ----------
 
 let skills = []; // current visible skill list
 let skillById = new Map();
@@ -58,9 +92,8 @@ function rebuildSkills() {
   const deleted = new Set(editState.deleted);
   combined = combined.filter((s) => !deleted.has(s.id));
 
-  // Merge overrides (file first, then localStorage on top).
-  const all = { ...fileOverrides, ...editState.overrides };
-  combined = combined.map((s) => ({ ...s, ...(all[s.id] ?? {}) }));
+  // Apply overrides on top.
+  combined = combined.map((s) => ({ ...s, ...(editState.overrides[s.id] ?? {}) }));
 
   skills = combined;
   skillById = new Map(skills.map((s) => [s.id, s]));
@@ -424,45 +457,36 @@ window.tree = {
   getSkillById: (id) => skillById.get(id),
   getEditState: () => editState,
   getBaseSkills: () => baseSkills,
-  getFileOverrides: () => fileOverrides,
 
-  // Mutations (caller is responsible for calling redraw / persist as needed)
+  // Mutations (caller is responsible for calling redraw / scheduleSave)
   setOverride(id, patch) {
     const existing = editState.overrides[id] ?? {};
     editState.overrides[id] = { ...existing, ...patch };
-    saveEditState(editState);
   },
   clearOverride(id) {
     delete editState.overrides[id];
-    saveEditState(editState);
   },
   addNode(node) {
     const idx = editState.added.findIndex((s) => s.id === node.id);
     if (idx >= 0) editState.added[idx] = node;
     else editState.added.push(node);
-    saveEditState(editState);
   },
   removeAdded(id) {
     editState.added = editState.added.filter((s) => s.id !== id);
-    saveEditState(editState);
   },
   isAdded(id) {
     return editState.added.some((s) => s.id === id);
   },
   markDeleted(id) {
     if (!editState.deleted.includes(id)) editState.deleted.push(id);
-    saveEditState(editState);
   },
   unmarkDeleted(id) {
     editState.deleted = editState.deleted.filter((d) => d !== id);
-    saveEditState(editState);
   },
-  resetAll() {
-    editState.overrides = {};
-    editState.added = [];
-    editState.deleted = [];
-    saveEditState(editState);
-  },
+
+  // Pending-state persistence (used by the editor on save success/failure)
+  persistPending,
+  clearPending,
 
   // Drawing
   redraw,

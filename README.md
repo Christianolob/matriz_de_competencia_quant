@@ -19,13 +19,13 @@ Double-click `run.bat`, or run `python server.py 8000` → `http://localhost:800
 ```
   index.html
   main.js                # render + pan/zoom + tooltip + tree API
-  editor.js              # edit mode (drag, CRUD, side panel, live code panel, auto-save)
+  editor.js              # edit mode (drag, CRUD, side panel, auto-save)
   styles.css
   server.py              # static server + PUT /data/overrides.js (auto-save target)
   data/skills.js         # base node metadata
   data/relationships.js  # explicit graph edges (nearby parent-child links)
   data/layout.js         # circular radial positions
-  data/overrides.js      # committed manual overrides on top of auto-layout (auto-saved)
+  data/overrides.js      # full edit state (overrides, addedNodes, deletedIds), auto-saved
   run.bat
 ```
 
@@ -38,7 +38,7 @@ Double-click `run.bat`, or run `python server.py 8000` → `http://localhost:800
 
 Relationships are defined in `data/relationships.js`. The graph is no longer a star: each outer point connects to nearby next steps, and only selected bridge skills feed cross-branch nodes near the center.
 
-Positions are computed by `data/layout.js` (planar wedges, no crossing straight edges) and then `data/overrides.js` and any `localStorage` overrides are layered on top.
+Positions are computed by `data/layout.js` (planar wedges, no crossing straight edges) and then the contents of `data/overrides.js` (overrides + added + deleted) are layered on top.
 
 ## Skill kinds
 
@@ -65,11 +65,11 @@ The tree ships with an in-app editor for tweaking node positions and metadata wi
 ### Toggle
 
 - Press **`E`** or click the **Edit** button (bottom-left toolbar).
-- The right-side panel slides in when a node is selected; the left-side **Code** panel mirrors `data/overrides.js` live.
+- The right-side panel slides in when a node is selected.
 
 ### Operations
 
-- **Move** — click and drag any node. Drag releases write a position override.
+- **Move** — click and drag any node. The cursor offset is preserved so the node does not jump.
 - **Add node** — toolbar button creates a new node at the viewport center, defaulting to the last-edited branch and `kind: "detail"`.
 - **Edit metadata** — selecting a node opens the side panel with editable Label, Branch, Kind and Description fields. Branch/Kind changes re-render the node with the right color and size.
 - **Delete** — base nodes are tombstoned (kept out of the render); custom-added nodes are removed entirely.
@@ -77,28 +77,28 @@ The tree ships with an in-app editor for tweaking node positions and metadata wi
 
 Edges/relationships are intentionally **not** editable from the UI. Edit `data/relationships.js` directly if you need to wire new nodes up.
 
-### Persistence: auto-save to `data/overrides.js`
+### What gets saved
 
-When you launch the app via `run.bat` (or `python server.py 8000`), every edit auto-saves to `data/overrides.js` on disk via a debounced HTTP `PUT` to the local server. The **Code** panel header shows the live status: `Saving...`, `Saved 22:14:07`, or `Save failed` if the server is not available.
+Every edit is silently auto-saved to [`data/overrides.js`](data/overrides.js) via the local server. That single file holds the **entire** edit state through three exports:
 
-That means once you are happy with your tree, you can simply commit:
+```js
+export const overrides   = { /* per base-node diffs */ };
+export const addedNodes  = [ /* skill objects you created */ ];
+export const deletedIds  = [ /* base node ids you deleted */ ];
+```
+
+Because the file fully describes the diff against `data/skills.js`, committing it reproduces your tree on any clone:
 
 ```bash
 git add data/overrides.js
-git commit -m "Update skill tree overrides"
+git commit -m "Update skill tree"
 git push
 ```
 
-The previous-session edits also remain in `localStorage` (key `matriz-edits`) as a backup — useful if you ever open the page without the local server.
-
-### Live overrides code
-
-Click **Code** in the toolbar to slide in a left-side panel showing the live `data/overrides.js` content. The textarea updates after every drag, metadata edit, add or delete; the **Copy** button is still there as a fallback if you want to paste somewhere else.
-
-New nodes you create via **Add node** stay in `localStorage` only — they are **not** auto-saved to `data/overrides.js`, because that file is for overrides on top of base nodes. To promote a custom node into source, copy its data manually into `data/skills.js` and add edges in `data/relationships.js`.
+The save itself is silent. A red banner only appears at the top if a save fails (for example, if you opened the page without `run.bat` / `server.py` running). Until you re-establish the connection, your unsaved edits are kept in `localStorage` under the key `matriz-edits` and replayed on reload.
 
 ### Out of scope
 
 - Editing edges via the UI.
-- Exporting newly added nodes as a code snippet.
+- Auto git commit/push.
 - Undo/redo, multi-select, snap-to-grid, touch input.

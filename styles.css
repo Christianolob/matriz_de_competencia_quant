@@ -541,106 +541,39 @@ body.is-editing .tooltip {
   margin-top: 8px;
 }
 
-/* Live overrides code panel (left drawer) */
+/* Save error banner (top-center, only shown when auto-save fails) */
 
-.editor-code-panel {
+.editor-save-error {
   position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: 380px;
-  background: rgba(20, 18, 36, 0.96);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(10px);
-  transform: translateX(-100%);
-  transition: transform 0.18s ease;
-  z-index: 70;
-  display: flex;
-  flex-direction: column;
-}
-
-.editor-code-panel.is-open {
-  transform: translateX(0);
-}
-
-.editor-code-panel__header {
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 75;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  gap: 8px;
-}
-
-.editor-code-panel__title {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.editor-code-panel__header h2 {
-  margin: 0;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(60, 12, 12, 0.92);
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  border-radius: 10px;
+  color: #fecaca;
   font-size: 13px;
-  letter-spacing: 0.5px;
-  font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
-  font-weight: 600;
-  color: var(--text-muted);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  max-width: min(640px, calc(100vw - 32px));
 }
 
-.editor-code-status {
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
+.editor-save-error[hidden] {
+  display: none;
 }
 
-.editor-code-status[data-state="dirty"],
-.editor-code-status[data-state="saving"] {
-  color: var(--spec-accent);
-}
-
-.editor-code-status[data-state="saved"] {
-  color: var(--branch-modeling);
-}
-
-.editor-code-status[data-state="error"] {
-  color: var(--branch-finance);
-}
-
-.editor-code-panel__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.editor-code-panel__body {
+.editor-save-error__text {
   flex: 1;
-  padding: 12px 14px 14px;
-  display: flex;
-  min-height: 0;
+  line-height: 1.4;
 }
 
-.editor-code-panel__body textarea {
-  flex: 1;
-  width: 100%;
-  font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  background: rgba(0, 0, 0, 0.32);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 10px 12px;
-  resize: none;
-  white-space: pre;
-  overflow: auto;
-}
-
-.editor-code-panel__body textarea:focus {
-  outline: none;
-  border-color: rgba(59, 130, 246, 0.6);
+.editor-save-error__retry {
+  flex-shrink: 0;
 }
 
 /* ---------- Basic responsive ---------- */
@@ -658,8 +591,7 @@ body.is-editing .tooltip {
     max-width: 220px;
   }
 
-  .editor-panel,
-  .editor-code-panel {
+  .editor-panel {
     width: 100vw;
   }
 }

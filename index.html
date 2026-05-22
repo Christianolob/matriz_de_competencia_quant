@@ -46,14 +46,15 @@
         >
           Add node
         </button>
+      </div>
+
+      <div id="editor-save-error" class="editor-save-error" role="alert" hidden>
+        <span class="editor-save-error__text"></span>
         <button
-          id="editor-code-toggle"
           type="button"
-          class="editor-btn"
-          aria-pressed="false"
-          title="Toggle the live data/overrides.js code panel"
+          class="editor-btn editor-save-error__retry"
         >
-          Code
+          Retry
         </button>
       </div>
 
@@ -126,42 +127,6 @@
         </div>
       </aside>
 
-      <aside
-        id="editor-code-panel"
-        class="editor-code-panel"
-        aria-label="Live overrides.js code"
-      >
-        <div class="editor-code-panel__header">
-          <div class="editor-code-panel__title">
-            <h2>data/overrides.js</h2>
-            <span
-              id="editor-code-status"
-              class="editor-code-status"
-              data-state="idle"
-              role="status"
-              aria-live="polite"
-            >
-              Auto-save ready
-            </span>
-          </div>
-          <div class="editor-code-panel__header-actions">
-            <button id="editor-code-copy" type="button" class="editor-btn">
-              Copy
-            </button>
-            <button
-              id="editor-code-close"
-              type="button"
-              class="editor-icon-btn"
-              aria-label="Close code panel"
-            >
-              &times;
-            </button>
-          </div>
-        </div>
-        <div class="editor-code-panel__body">
-          <textarea id="editor-code-text" readonly spellcheck="false"></textarea>
-        </div>
-      </aside>
     </main>
 
     <script type="module" src="main.js"></script>
