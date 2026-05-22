@@ -4,13 +4,15 @@
  * Cross nodes sit on wedge boundaries; apex at the center.
  */
 
+import { parentsOf } from "./relationships.js";
+
 const CX = 1200;
 const CY = 900;
 
 const R = {
   root: 860,
-  hub: 680,
-  detail: 500,
+  step: 65,
+  minLocal: 210,
   cross: 110,
   apex: 0,
 };
@@ -22,7 +24,7 @@ const CROSS_ANCHORS = {
   },
   "cross-pricing": {
     angle: 30,
-    parents: ["stoc-ito", "econ-monetary"],
+    parents: ["markets-derivatives"],
   },
   "cross-trading": {
     angle: 270,
@@ -37,49 +39,143 @@ const BRANCH_WEDGES = {
 };
 
 const CHILD_ORDER = {
-  "mod-root": ["mod-stoc", "mod-opt", "mod-pure-math", "mod-stats"],
-  "mod-stoc": ["stoc-ito", "stoc-brownian", "stoc-sde", "stoc-poisson"],
-  "mod-stats": [
-    "stats-bayesian",
-    "stats-frequentist",
-    "stats-timeseries",
-    "stats-regression",
-  ],
+  "mod-root": ["mod-pure-math"],
   "mod-pure-math": [
-    "math-linalg",
     "math-real-analysis",
+    "mod-stats",
+  ],
+  "math-real-analysis": [
+    "math-linalg",
+  ],
+  "math-linalg": [
     "math-topology",
+  ],
+  "math-topology": [
     "math-abstract-algebra",
   ],
-  "tec-root": ["tec-cloud", "tec-backend", "tec-frontend", "tec-devops", "tec-data"],
-  "tec-cloud": ["cloud-ml", "cloud-compute", "cloud-storage"],
-  "tec-data": ["data-pipelines", "data-warehouse", "data-streaming"],
+  "mod-stats": [
+    "stats-frequentist",
+    "stats-bayesian",
+    "stats-regression",
+  ],
+  "stats-regression": [
+    "stats-timeseries",
+    "mod-stoc",
+  ],
+  "mod-stoc": [
+    "stoc-brownian",
+    "stoc-ito",
+  ],
+  "stoc-ito": [
+    "stoc-sde",
+  ],
+  "stoc-sde": [
+    "stoc-poisson",
+    "mod-opt",
+  ],
+  "mod-opt": [
+    "opt-convex",
+    "opt-stochastic",
+  ],
+  "opt-stochastic": [
+    "opt-mip",
+  ],
+  "opt-mip": [
+    "opt-numerical",
+  ],
+  "tec-root": ["tec-cloud"],
+  "tec-cloud": [
+    "cloud-compute",
+    "tec-backend",
+  ],
+  "cloud-compute": [
+    "cloud-storage",
+  ],
+  "cloud-storage": [
+    "cloud-ml",
+  ],
   "tec-backend": [
-    "backend-langs",
     "backend-apis",
     "backend-db-sql",
+  ],
+  "backend-db-sql": [
     "backend-db-nosql",
+  ],
+  "backend-db-nosql": [
+    "backend-langs",
+  ],
+  "backend-langs": [
     "backend-microservices",
+    "tec-frontend",
   ],
   "tec-frontend": [
     "frontend-react",
-    "frontend-css",
     "frontend-state",
-    "frontend-build",
   ],
-  "fin-root": ["fin-markets", "fin-alt", "fin-acc", "fin-econ"],
+  "frontend-state": [
+    "frontend-css",
+  ],
+  "frontend-css": [
+    "frontend-build",
+    "tec-devops",
+  ],
+  "tec-devops": [
+    "devops-ci",
+    "devops-iac",
+  ],
+  "devops-iac": [
+    "devops-monitor",
+    "tec-data",
+  ],
+  "tec-data": [
+    "data-pipelines",
+    "data-warehouse",
+  ],
+  "data-warehouse": [
+    "data-streaming",
+  ],
+  "fin-root": ["fin-markets"],
   "fin-markets": [
-    "markets-microstructure",
     "markets-equity",
+    "fin-alt",
+  ],
+  "markets-equity": [
     "markets-fixed-income",
+  ],
+  "markets-fixed-income": [
     "markets-fx",
+  ],
+  "markets-fx": [
     "markets-derivatives",
   ],
+  "markets-derivatives": [
+    "markets-microstructure",
+  ],
+  "fin-alt": [
+    "alt-hedge",
+    "alt-pe",
+  ],
+  "alt-pe": [
+    "alt-real-estate",
+    "fin-acc",
+  ],
+  "fin-acc": [
+    "acc-statements",
+    "acc-corp",
+  ],
+  "acc-corp": [
+    "acc-tax",
+    "fin-econ",
+  ],
   "fin-econ": [
-    "econ-monetary",
     "econ-macro",
     "econ-micro",
+  ],
+  "econ-micro": [
     "econ-econometrics",
+  ],
+  "econ-econometrics": [
+    "econ-monetary",
   ],
 };
 
@@ -112,7 +208,7 @@ function buildGraph(skills) {
   const children = new Map();
   for (const s of skills) children.set(s.id, []);
   for (const s of skills) {
-    for (const p of s.prereqs) {
+    for (const p of parentsOf(s.id)) {
       children.get(p).push(s.id);
     }
   }
@@ -141,8 +237,11 @@ function orderChildren(parentId, childIds) {
   );
 }
 
-function radiusForKind(kind) {
-  return R[kind] ?? R.detail;
+function radiusForKind(kind, depth = 1) {
+  if (kind === "root") return R.root;
+  if (kind === "cross") return R.cross;
+  if (kind === "apex") return R.apex;
+  return Math.max(R.minLocal, R.root - depth * R.step);
 }
 
 function layoutSubtree(
@@ -153,11 +252,12 @@ function layoutSubtree(
   children,
   positions,
   wedgeStart,
-  wedgeEnd
+  wedgeEnd,
+  depth = 1
 ) {
   const node = byId.get(id);
   const ba = boundaryAngleForNode(id);
-  const r = radiusForKind(node.kind);
+  const r = radiusForKind(node.kind, depth);
 
   const angle = ba !== null ? ba : lerpAngle(angleStart, angleEnd, 0.5);
   positions.set(id, polar(r, angle));
@@ -188,7 +288,8 @@ function layoutSubtree(
       children,
       positions,
       wedgeStart,
-      wedgeEnd
+      wedgeEnd,
+      depth + 1
     );
     t += childSpan;
   }
@@ -233,7 +334,7 @@ export function applyLayout(skills) {
     positions.set(crossId, polar(R.cross, cfg.angle));
     for (const pid of cfg.parents) {
       const p = byId.get(pid);
-      if (p) positions.set(pid, polar(radiusForKind(p.kind), cfg.angle));
+          if (p) positions.set(pid, polar(R.minLocal, cfg.angle));
     }
   }
 

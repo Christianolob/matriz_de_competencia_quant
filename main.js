@@ -1,5 +1,6 @@
 import { skills } from "./data/skills.js";
 import { applyLayout } from "./data/layout.js";
+import { parentsOf } from "./data/relationships.js";
 
 applyLayout(skills);
 
@@ -104,7 +105,7 @@ function appendRootHubEdge(parent, child, classes) {
 
 function drawEdges() {
   for (const skill of skills) {
-    for (const prereqId of skill.prereqs) {
+    for (const prereqId of parentsOf(skill.id)) {
       const parent = skillById.get(prereqId);
       if (!parent) continue;
       const isCross = parent.branch !== skill.branch;

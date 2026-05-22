@@ -78,7 +78,7 @@ export const skills = [
     x: 1120,
     y: 447,
     desc: "Inference, hypothesis testing, regression, time series.",
-    prereqs: ["mod-root"],
+    prereqs: ["mod-pure-math"],
   },
   {
     id: "mod-stoc",
@@ -88,7 +88,7 @@ export const skills = [
     x: 1280,
     y: 447,
     desc: "Continuous-time random processes, Ito calculus, SDEs.",
-    prereqs: ["mod-root"],
+    prereqs: ["mod-stats"],
   },
   {
     id: "mod-opt",
@@ -98,7 +98,7 @@ export const skills = [
     x: 1430,
     y: 502,
     desc: "Linear, convex, integer and stochastic programming.",
-    prereqs: ["mod-root"],
+    prereqs: ["mod-stoc"],
   },
 
   // MODELING -- DETAILS (Pure Math)
@@ -120,7 +120,7 @@ export const skills = [
     x: 820,
     y: 460,
     desc: "Vector spaces, matrices, eigenvalues, decompositions.",
-    prereqs: ["mod-pure-math"],
+    prereqs: ["math-real-analysis"],
   },
   {
     id: "math-topology",
@@ -130,7 +130,7 @@ export const skills = [
     x: 790,
     y: 560,
     desc: "Open/closed sets, continuity in abstract spaces, compactness.",
-    prereqs: ["mod-pure-math"],
+    prereqs: ["math-linalg"],
   },
   {
     id: "math-abstract-algebra",
@@ -140,7 +140,7 @@ export const skills = [
     x: 870,
     y: 620,
     desc: "Groups, rings, fields and their morphisms.",
-    prereqs: ["mod-pure-math"],
+    prereqs: ["math-topology"],
   },
 
   // MODELING -- DETAILS (Statistics)
@@ -162,7 +162,7 @@ export const skills = [
     x: 1080,
     y: 290,
     desc: "Priors, posteriors, MCMC, hierarchical models.",
-    prereqs: ["mod-stats"],
+    prereqs: ["stats-frequentist"],
   },
   {
     id: "stats-regression",
@@ -172,7 +172,7 @@ export const skills = [
     x: 1180,
     y: 320,
     desc: "Linear, GLM, regularization, model selection.",
-    prereqs: ["mod-stats"],
+    prereqs: ["stats-bayesian"],
   },
   {
     id: "stats-timeseries",
@@ -182,7 +182,7 @@ export const skills = [
     x: 1080,
     y: 580,
     desc: "ARIMA, GARCH, state-space models, forecasting.",
-    prereqs: ["mod-stats"],
+    prereqs: ["stats-regression"],
   },
 
   // MODELING -- DETAILS (Stochastic)
@@ -204,7 +204,7 @@ export const skills = [
     x: 1340,
     y: 290,
     desc: "Ito integral, lemma of Ito, stochastic integration.",
-    prereqs: ["mod-stoc"],
+    prereqs: ["stoc-brownian"],
   },
   {
     id: "stoc-sde",
@@ -214,7 +214,7 @@ export const skills = [
     x: 1340,
     y: 580,
     desc: "Stochastic differential equations: existence, simulation.",
-    prereqs: ["mod-stoc"],
+    prereqs: ["stoc-ito"],
   },
   {
     id: "stoc-poisson",
@@ -224,7 +224,7 @@ export const skills = [
     x: 1240,
     y: 580,
     desc: "Poisson, Levy processes, jump-diffusion models.",
-    prereqs: ["mod-stoc"],
+    prereqs: ["stoc-sde"],
   },
 
   // MODELING -- DETAILS (Optimization)
@@ -246,7 +246,7 @@ export const skills = [
     x: 1460,
     y: 320,
     desc: "Optimization under uncertainty, sample average approximation.",
-    prereqs: ["mod-opt"],
+    prereqs: ["opt-convex"],
   },
   {
     id: "opt-mip",
@@ -256,7 +256,7 @@ export const skills = [
     x: 1620,
     y: 460,
     desc: "MIP, branch and bound, combinatorial optimization.",
-    prereqs: ["mod-opt"],
+    prereqs: ["opt-stochastic"],
   },
   {
     id: "opt-numerical",
@@ -266,7 +266,7 @@ export const skills = [
     x: 1530,
     y: 600,
     desc: "Root finding, ODE solvers, finite differences.",
-    prereqs: ["mod-opt"],
+    prereqs: ["opt-mip"],
   },
 
   // ============================================================
@@ -290,7 +290,7 @@ export const skills = [
     x: 740,
     y: 900,
     desc: "Server-side systems, APIs, databases, business logic.",
-    prereqs: ["tec-root"],
+    prereqs: ["tec-cloud"],
   },
   {
     id: "tec-frontend",
@@ -300,7 +300,7 @@ export const skills = [
     x: 760,
     y: 1020,
     desc: "User interfaces, browsers, modern JS frameworks.",
-    prereqs: ["tec-root"],
+    prereqs: ["tec-backend"],
   },
   {
     id: "tec-devops",
@@ -310,7 +310,7 @@ export const skills = [
     x: 800,
     y: 1135,
     desc: "CI/CD, observability, automation, reliable deploys.",
-    prereqs: ["tec-root"],
+    prereqs: ["tec-frontend"],
   },
   {
     id: "tec-data",
@@ -320,7 +320,7 @@ export const skills = [
     x: 970,
     y: 1300,
     desc: "Pipelines, warehouses, streaming, lakehouses.",
-    prereqs: ["tec-root"],
+    prereqs: ["tec-devops"],
   },
 
   // TECH -- DETAILS (Backend)
@@ -342,7 +342,7 @@ export const skills = [
     x: 570,
     y: 920,
     desc: "Postgres, MySQL, transactions, indexes, query plans.",
-    prereqs: ["tec-backend"],
+    prereqs: ["backend-apis"],
   },
   {
     id: "backend-db-nosql",
@@ -352,7 +352,7 @@ export const skills = [
     x: 510,
     y: 970,
     desc: "Redis, Mongo, DynamoDB, key-value and document stores.",
-    prereqs: ["tec-backend"],
+    prereqs: ["backend-db-sql"],
   },
   {
     id: "backend-langs",
@@ -362,7 +362,7 @@ export const skills = [
     x: 660,
     y: 800,
     desc: "Python, Go, Rust, Java: pick the right tool per job.",
-    prereqs: ["tec-backend"],
+    prereqs: ["backend-db-nosql"],
   },
   {
     id: "backend-microservices",
@@ -372,7 +372,7 @@ export const skills = [
     x: 670,
     y: 720,
     desc: "Service boundaries, async messaging, sagas.",
-    prereqs: ["tec-backend"],
+    prereqs: ["backend-langs"],
   },
 
   // TECH -- DETAILS (Frontend)
@@ -394,7 +394,7 @@ export const skills = [
     x: 580,
     y: 1100,
     desc: "Redux, Zustand, signals, server state.",
-    prereqs: ["tec-frontend"],
+    prereqs: ["frontend-react"],
   },
   {
     id: "frontend-css",
@@ -404,7 +404,7 @@ export const skills = [
     x: 630,
     y: 1170,
     desc: "Modern CSS, Tailwind, design tokens, responsive layout.",
-    prereqs: ["tec-frontend"],
+    prereqs: ["frontend-state"],
   },
   {
     id: "frontend-build",
@@ -414,7 +414,7 @@ export const skills = [
     x: 670,
     y: 1080,
     desc: "Vite, Webpack, esbuild, bundling and tree-shaking.",
-    prereqs: ["tec-frontend"],
+    prereqs: ["frontend-css"],
   },
 
   // TECH -- DETAILS (DevOps)
@@ -436,7 +436,7 @@ export const skills = [
     x: 770,
     y: 1300,
     desc: "Terraform, Pulumi, CloudFormation.",
-    prereqs: ["tec-devops"],
+    prereqs: ["devops-ci"],
   },
   {
     id: "devops-monitor",
@@ -446,7 +446,7 @@ export const skills = [
     x: 880,
     y: 1170,
     desc: "Logs, metrics, traces; Prometheus, Grafana, OpenTelemetry.",
-    prereqs: ["tec-devops"],
+    prereqs: ["devops-iac"],
   },
 
   // TECH -- DETAILS (Cloud)
@@ -468,7 +468,7 @@ export const skills = [
     x: 920,
     y: 1410,
     desc: "S3, EBS, Glacier, lifecycle policies.",
-    prereqs: ["tec-cloud"],
+    prereqs: ["cloud-compute"],
   },
   {
     id: "cloud-ml",
@@ -478,7 +478,7 @@ export const skills = [
     x: 1000,
     y: 1500,
     desc: "SageMaker, Vertex AI, managed training and inference.",
-    prereqs: ["tec-cloud"],
+    prereqs: ["cloud-storage"],
   },
 
   // TECH -- DETAILS (Data Eng)
@@ -500,7 +500,7 @@ export const skills = [
     x: 1110,
     y: 1480,
     desc: "Snowflake, BigQuery, Redshift, dimensional modeling.",
-    prereqs: ["tec-data"],
+    prereqs: ["data-pipelines"],
   },
   {
     id: "data-streaming",
@@ -510,7 +510,7 @@ export const skills = [
     x: 1080,
     y: 1380,
     desc: "Kafka, Flink, real-time processing, exactly-once semantics.",
-    prereqs: ["tec-data"],
+    prereqs: ["data-warehouse"],
   },
 
   // ============================================================
@@ -534,7 +534,7 @@ export const skills = [
     x: 1552,
     y: 1195,
     desc: "Hedge funds, PE, real estate, private credit.",
-    prereqs: ["fin-root"],
+    prereqs: ["fin-markets"],
   },
   {
     id: "fin-acc",
@@ -544,7 +544,7 @@ export const skills = [
     x: 1632,
     y: 1057,
     desc: "Financial statements, valuation, accounting fundamentals.",
-    prereqs: ["fin-root"],
+    prereqs: ["fin-alt"],
   },
   {
     id: "fin-econ",
@@ -554,7 +554,7 @@ export const skills = [
     x: 1660,
     y: 900,
     desc: "How agents, markets and policies allocate resources.",
-    prereqs: ["fin-root"],
+    prereqs: ["fin-acc"],
   },
 
   // FINANCE -- DETAILS (Economics)
@@ -576,7 +576,7 @@ export const skills = [
     x: 1860,
     y: 880,
     desc: "Consumer/firm behavior, equilibrium, market structure.",
-    prereqs: ["fin-econ"],
+    prereqs: ["econ-macro"],
   },
   {
     id: "econ-econometrics",
@@ -586,7 +586,7 @@ export const skills = [
     x: 1880,
     y: 940,
     desc: "Panel data, instrumental variables, structural models.",
-    prereqs: ["fin-econ"],
+    prereqs: ["econ-micro"],
   },
   {
     id: "econ-monetary",
@@ -596,7 +596,7 @@ export const skills = [
     x: 1780,
     y: 760,
     desc: "Central banks, interest rates, transmission channels.",
-    prereqs: ["fin-econ"],
+    prereqs: ["econ-econometrics"],
   },
 
   // FINANCE -- DETAILS (Accounting)
@@ -618,7 +618,7 @@ export const skills = [
     x: 1830,
     y: 1100,
     desc: "Capital structure, dividend policy, M&A.",
-    prereqs: ["fin-acc"],
+    prereqs: ["acc-statements"],
   },
   {
     id: "acc-tax",
@@ -628,7 +628,7 @@ export const skills = [
     x: 1770,
     y: 1170,
     desc: "Corporate and asset taxation, optimization, jurisdictions.",
-    prereqs: ["fin-acc"],
+    prereqs: ["acc-corp"],
   },
 
   // FINANCE -- DETAILS (Alternatives)
@@ -650,7 +650,7 @@ export const skills = [
     x: 1640,
     y: 1320,
     desc: "Buyouts, growth, venture; J-curve and exit dynamics.",
-    prereqs: ["fin-alt"],
+    prereqs: ["alt-hedge"],
   },
   {
     id: "alt-real-estate",
@@ -660,7 +660,7 @@ export const skills = [
     x: 1580,
     y: 1380,
     desc: "REITs, direct property, commercial vs residential.",
-    prereqs: ["fin-alt"],
+    prereqs: ["alt-pe"],
   },
 
   // FINANCE -- DETAILS (Markets)
@@ -682,7 +682,7 @@ export const skills = [
     x: 1340,
     y: 1430,
     desc: "Yield curves, duration, convexity, credit spreads.",
-    prereqs: ["fin-markets"],
+    prereqs: ["markets-equity"],
   },
   {
     id: "markets-fx",
@@ -692,7 +692,7 @@ export const skills = [
     x: 1260,
     y: 1380,
     desc: "Spot, forwards, carry trade, EM dynamics.",
-    prereqs: ["fin-markets"],
+    prereqs: ["markets-fixed-income"],
   },
   {
     id: "markets-derivatives",
@@ -702,7 +702,7 @@ export const skills = [
     x: 1340,
     y: 1240,
     desc: "Options, futures, swaps, exotics.",
-    prereqs: ["fin-markets"],
+    prereqs: ["markets-fx"],
   },
   {
     id: "markets-microstructure",
@@ -712,7 +712,7 @@ export const skills = [
     x: 1280,
     y: 1170,
     desc: "Order book, liquidity, execution, market making.",
-    prereqs: ["fin-markets"],
+    prereqs: ["markets-derivatives"],
   },
 
   // ============================================================
@@ -736,7 +736,7 @@ export const skills = [
     x: 0,
     y: 0,
     desc: "Modeling + Finance. Asset pricing, derivatives, risk-neutral measures.",
-    prereqs: ["stoc-ito", "econ-monetary"],
+    prereqs: ["stats-timeseries", "markets-derivatives"],
   },
   {
     id: "cross-trading",

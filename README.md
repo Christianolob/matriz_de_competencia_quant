@@ -16,7 +16,8 @@ Double-click `run.bat`, or `python -m http.server 8000` → `http://localhost:80
 ```
   index.html
   main.js
-  data/skills.js    # graph data
+  data/skills.js    # node metadata
+  data/relationships.js # explicit graph edges (nearby parent-child links)
   data/layout.js    # circular radial positions
   run.bat
 ```
@@ -28,7 +29,9 @@ Double-click `run.bat`, or `python -m http.server 8000` → `http://localhost:80
 - **Cross** nodes on boundaries between branches (ML, Pricing, Trading).
 - **Apex** (Quant Researcher) at the center.
 
-Positions are computed by `data/layout.js` (planar wedges, no crossing straight edges between branches).
+Relationships are defined in `data/relationships.js`. The graph is no longer a star: each outer point connects to nearby next steps, and only selected bridge skills feed cross-branch nodes near the center.
+
+Positions are computed by `data/layout.js` (planar wedges, no crossing straight edges).
 
 ## Skill kinds
 
