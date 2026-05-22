@@ -1,0 +1,359 @@
+:root {
+  --bg-0: #0d0d12;
+  --bg-1: #1a1530;
+  --text-primary: #e8e6f5;
+  --text-muted: #9b96b8;
+  --text-dim: #6e6a85;
+
+  --branch-modeling: #22c55e;
+  --branch-technology: #3b82f6;
+  --branch-finance: #ef4444;
+  --branch-cross: #f5f5fa;
+  --spec-accent: #facc15;
+
+  --edge-color: rgba(180, 180, 220, 0.22);
+  --edge-cross-color: rgba(245, 245, 250, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(ellipse at 50% 50%, #1a1530 0%, #0d0d12 70%);
+  color: var(--text-primary);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ---------- Canvas ---------- */
+
+.canvas-wrap {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---------- Title (top-right overlay) ---------- */
+
+.title {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  text-align: right;
+  z-index: 5;
+  pointer-events: none;
+  max-width: 380px;
+}
+
+.title h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  line-height: 1.15;
+  background: linear-gradient(
+    90deg,
+    var(--branch-technology),
+    var(--branch-modeling),
+    var(--branch-finance)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.title .subtitle {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+#tree {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  cursor: grab;
+  user-select: none;
+}
+
+#tree.is-panning {
+  cursor: grabbing;
+}
+
+/* ---------- Edges ---------- */
+
+.edge {
+  stroke: var(--edge-color);
+  stroke-width: 1.5;
+  fill: none;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease, opacity 0.15s ease;
+}
+
+.edge path,
+path.edge {
+  stroke: inherit;
+  stroke-width: inherit;
+  fill: none;
+}
+
+.edge.branch-modeling {
+  stroke: rgba(34, 197, 94, 0.32);
+}
+.edge.branch-technology {
+  stroke: rgba(59, 130, 246, 0.32);
+}
+.edge.branch-finance {
+  stroke: rgba(239, 68, 68, 0.32);
+}
+
+.edge.cross {
+  stroke: var(--edge-cross-color);
+  stroke-dasharray: 6 4;
+  stroke-width: 2;
+}
+
+.edge.is-active {
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+/* ---------- Nodes ---------- */
+
+.node {
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.node circle {
+  transition: stroke-width 0.15s ease, fill 0.15s ease;
+}
+
+.node text {
+  fill: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-anchor: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(13, 13, 18, 0.85);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.node:hover {
+  filter: brightness(1.3);
+}
+
+/* Branch colors -- fill, stroke and currentColor for drop-shadow */
+
+.branch-modeling {
+  color: var(--branch-modeling);
+}
+.branch-technology {
+  color: var(--branch-technology);
+}
+.branch-finance {
+  color: var(--branch-finance);
+}
+.branch-cross {
+  color: var(--branch-cross);
+}
+
+.branch-modeling circle {
+  fill: var(--branch-modeling);
+  stroke: var(--branch-modeling);
+}
+.branch-technology circle {
+  fill: var(--branch-technology);
+  stroke: var(--branch-technology);
+}
+.branch-finance circle {
+  fill: var(--branch-finance);
+  stroke: var(--branch-finance);
+}
+.branch-cross circle {
+  fill: var(--branch-cross);
+  stroke: var(--branch-cross);
+}
+
+/* Kinds -- size, stroke and glow ----------------- */
+
+.kind-root circle {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 18px currentColor);
+}
+.kind-root text {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.kind-hub circle {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 10px currentColor);
+}
+.kind-hub text {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.kind-detail circle {
+  stroke-width: 1.5;
+  fill-opacity: 0.85;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+.kind-detail text {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.kind-spec circle {
+  stroke: var(--spec-accent);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 10px var(--spec-accent))
+    drop-shadow(0 0 4px currentColor);
+}
+.kind-spec text {
+  font-size: 14px;
+  font-weight: 700;
+  fill: var(--spec-accent);
+}
+
+.kind-cross circle {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 12px currentColor);
+}
+.kind-cross text {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.kind-apex circle {
+  stroke-width: 4;
+  animation: apex-pulse 2.4s ease-in-out infinite;
+}
+.kind-apex text {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+@keyframes apex-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 14px currentColor)
+      drop-shadow(0 0 28px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 24px currentColor)
+      drop-shadow(0 0 50px currentColor);
+  }
+}
+
+/* ---------- Tooltip ---------- */
+
+.tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 50;
+  min-width: 240px;
+  max-width: 320px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(20, 18, 36, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.45;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltip__title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.tooltip__badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.tooltip__badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tooltip__badge.branch-modeling {
+  background: rgba(34, 197, 94, 0.18);
+  color: var(--branch-modeling);
+}
+.tooltip__badge.branch-technology {
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--branch-technology);
+}
+.tooltip__badge.branch-finance {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--branch-finance);
+}
+.tooltip__badge.branch-cross {
+  background: rgba(245, 245, 250, 0.14);
+  color: var(--branch-cross);
+}
+
+.tooltip__badge--kind {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+.tooltip__badge--kind.kind-spec {
+  background: rgba(250, 204, 21, 0.16);
+  color: var(--spec-accent);
+}
+.tooltip__badge--kind.kind-apex {
+  background: rgba(245, 245, 250, 0.18);
+  color: var(--branch-cross);
+}
+
+.tooltip__desc {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ---------- Basic responsive ---------- */
+
+@media (max-width: 720px) {
+  .title {
+    top: 12px;
+    right: 14px;
+  }
+  .title h1 {
+    font-size: 16px;
+  }
+  .title .subtitle {
+    font-size: 10px;
+    max-width: 220px;
+  }
+}

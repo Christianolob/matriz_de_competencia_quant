@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quant Competence Matrix</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="canvas-wrap">
+      <div class="title">
+        <h1>Quant Competence Matrix</h1>
+        <p class="subtitle">Circular skill tree &middot; Hover &middot; Drag &middot; Scroll zoom &middot; Double-click reset</p>
+      </div>
+
+      <svg
+        id="tree"
+        viewBox="0 0 2400 1800"
+        preserveAspectRatio="xMidYMid meet"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="Quant skill tree"
+      >
+        <g id="edges-layer"></g>
+        <g id="nodes-layer"></g>
+      </svg>
+
+      <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
