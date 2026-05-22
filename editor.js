@@ -7,13 +7,12 @@
  *  - "Add node" creates a new circle at the viewport center.
  *  - The side panel lets you edit label, branch, kind, description.
  *  - Delete removes the node (added nodes are erased; base nodes are tombstoned).
+ *  - "Connect" enters connection mode: click source node, then click target to
+ *    add or remove an edge. Escape cancels. Clicking background clears selection.
  *
  * Every edit auto-saves to data/overrides.js via the local server (server.py).
- * The full state -- overrides, addedNodes, deletedIds -- lives in that one
- * file, so committing it is enough to reproduce the tree on any clone.
- *
- * Edges (relationships) are not editable from the UI on purpose -- edit
- * data/relationships.js directly in your code editor.
+ * The full state lives in that file, so committing it reproduces the tree
+ * on any clone.
  */
 
 function initEditor() {
@@ -24,6 +23,7 @@ function initEditor() {
   const toolbar = document.getElementById("editor-toolbar");
   const toggleBtn = document.getElementById("editor-toggle");
   const addBtn = document.getElementById("editor-add");
+  const connectBtn = document.getElementById("editor-connect");
 
   const panel = document.getElementById("editor-panel");
   const panelClose = document.getElementById("editor-panel-close");
@@ -55,6 +55,10 @@ function initEditor() {
   let lastBranch = "modeling";
   let suppressNextClick = false;
 
+  // Connect mode state
+  let connectMode = false;
+  let connectSource = null; // id of the first node clicked
+
   // ---------- Helpers ----------
 
   function isAddedId(id) {
@@ -71,8 +75,10 @@ function initEditor() {
     toggleBtn.setAttribute("aria-pressed", String(editing));
     toggleBtn.textContent = editing ? "Exit edit" : "Edit";
     addBtn.disabled = !editing;
+    if (connectBtn) connectBtn.disabled = !editing;
     if (!editing) {
       clearSelection();
+      setConnectMode(false);
     }
   }
 
@@ -122,6 +128,68 @@ function initEditor() {
   function cssEscape(s) {
     if (window.CSS && CSS.escape) return CSS.escape(s);
     return String(s).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+  }
+
+  // ---------- Connect mode ----------
+
+  function setConnectMode(on) {
+    connectMode = on;
+    body.classList.toggle("is-connecting", connectMode);
+    if (connectBtn) connectBtn.setAttribute("aria-pressed", String(connectMode));
+    if (!connectMode) {
+      clearConnectSource();
+      removePreviewLine();
+    }
+  }
+
+  function clearConnectSource() {
+    if (connectSource) {
+      const g = tree.nodesLayer.querySelector(
+        `[data-id="${cssEscape(connectSource)}"]`
+      );
+      if (g) g.classList.remove("is-connect-source");
+    }
+    connectSource = null;
+  }
+
+  function setConnectSource(id) {
+    clearConnectSource();
+    connectSource = id;
+    const g = tree.nodesLayer.querySelector(`[data-id="${cssEscape(id)}"]`);
+    if (g) g.classList.add("is-connect-source");
+  }
+
+  // Preview line from source node to cursor
+  let previewLine = null;
+
+  function updatePreviewLine(worldX, worldY) {
+    if (!connectSource) {
+      removePreviewLine();
+      return;
+    }
+    const src = tree.getSkillById(connectSource);
+    if (!src) {
+      removePreviewLine();
+      return;
+    }
+    if (!previewLine) {
+      const SVG_NS = "http://www.w3.org/2000/svg";
+      previewLine = document.createElementNS(SVG_NS, "line");
+      previewLine.id = "connect-preview";
+      previewLine.setAttribute("pointer-events", "none");
+      tree.edgesLayer.appendChild(previewLine);
+    }
+    previewLine.setAttribute("x1", String(src.x));
+    previewLine.setAttribute("y1", String(src.y));
+    previewLine.setAttribute("x2", String(worldX));
+    previewLine.setAttribute("y2", String(worldY));
+  }
+
+  function removePreviewLine() {
+    if (previewLine && previewLine.parentNode) {
+      previewLine.parentNode.removeChild(previewLine);
+    }
+    previewLine = null;
   }
 
   // ---------- Drag ----------
@@ -260,7 +328,7 @@ function initEditor() {
     });
   }
 
-  // ---------- Selection on click ----------
+  // ---------- Selection / connect on click ----------
 
   tree.svg.addEventListener("click", (event) => {
     if (!editing) return;
@@ -268,7 +336,40 @@ function initEditor() {
       suppressNextClick = false;
       return;
     }
+
     const node = event.target.closest(".node");
+
+    if (connectMode) {
+      if (!node) {
+        // Click on background: clear source, stay in connect mode
+        clearConnectSource();
+        return;
+      }
+      const id = node.getAttribute("data-id");
+      if (!connectSource) {
+        // First click: set source
+        setConnectSource(id);
+      } else if (id === connectSource) {
+        // Click on the same node: deselect source
+        clearConnectSource();
+      } else {
+        // Second click on a different node: toggle edge
+        if (tree.hasEdge(connectSource, id)) {
+          tree.removeEdge(connectSource, id);
+        } else {
+          tree.addEdge(connectSource, id);
+        }
+        const prevSource = connectSource;
+        clearConnectSource();
+        removePreviewLine();
+        tree.redraw();
+        // Re-highlight source (stays selected for chaining)
+        setConnectSource(prevSource);
+        scheduleSave();
+      }
+      return;
+    }
+
     if (!node) {
       clearSelection();
       return;
@@ -276,9 +377,23 @@ function initEditor() {
     selectNode(node.getAttribute("data-id"));
   });
 
+  // Preview line follows mouse while in connect mode with a source selected
+  tree.svg.addEventListener("mousemove", (event) => {
+    if (!connectMode || !connectSource) return;
+    const world = tree.clientToWorld(event.clientX, event.clientY);
+    updatePreviewLine(world.x, world.y);
+  });
+
   // ---------- Toolbar buttons ----------
 
   toggleBtn.addEventListener("click", () => setEditing(!editing));
+
+  if (connectBtn) {
+    connectBtn.addEventListener("click", () => {
+      if (!editing) return;
+      setConnectMode(!connectMode);
+    });
+  }
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "e" || event.key === "E") {
@@ -296,7 +411,11 @@ function initEditor() {
       setEditing(!editing);
     }
     if (event.key === "Escape") {
-      clearSelection();
+      if (connectMode) {
+        setConnectMode(false);
+      } else {
+        clearSelection();
+      }
     }
   });
 
@@ -461,12 +580,14 @@ function initEditor() {
       "/**",
       " * Full edit state of the skill tree, persisted to source.",
       " *",
-      " * Auto-saved by the in-app editor (server.py / run.bat). Three exports",
+      " * Auto-saved by the in-app editor (server.py / run.bat). Five exports",
       " * cover the complete state:",
       " *",
-      " *   overrides   -- per base-node diff (subset of x, y, label, branch, kind, desc)",
-      " *   addedNodes  -- full skill objects created with the Add node button",
-      " *   deletedIds  -- ids of base nodes hidden from the render",
+      " *   overrides    -- per base-node diff (subset of x, y, label, branch, kind, desc)",
+      " *   addedNodes   -- full skill objects created with the Add node button",
+      " *   deletedIds   -- ids of base nodes hidden from the render",
+      " *   addedEdges   -- extra edges beyond data/relationships.js  { from, to }",
+      " *   deletedEdges -- base edges removed via the Connect tool    { from, to }",
       " *",
       " * Commit this file and any clone reproduces the same tree.",
       " */",
@@ -514,6 +635,24 @@ function initEditor() {
     lines.push("export const deletedIds = [");
     for (const id of deleted) {
       lines.push(`  ${JSON.stringify(id)},`);
+    }
+    lines.push("];", "");
+
+    const addedEdges = (st.addedEdges ?? [])
+      .slice()
+      .sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+    lines.push("export const addedEdges = [");
+    for (const e of addedEdges) {
+      lines.push(`  { from: ${JSON.stringify(e.from)}, to: ${JSON.stringify(e.to)} },`);
+    }
+    lines.push("];", "");
+
+    const deletedEdges = (st.deletedEdges ?? [])
+      .slice()
+      .sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+    lines.push("export const deletedEdges = [");
+    for (const e of deletedEdges) {
+      lines.push(`  { from: ${JSON.stringify(e.from)}, to: ${JSON.stringify(e.to)} },`);
     }
     lines.push("];", "");
 

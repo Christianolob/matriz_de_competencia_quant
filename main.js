@@ -5,6 +5,8 @@ import {
   overrides as fileOverrides,
   addedNodes as fileAddedNodes,
   deletedIds as fileDeletedIds,
+  addedEdges as fileAddedEdges,
+  deletedEdges as fileDeletedEdges,
 } from "./data/overrides.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -34,6 +36,8 @@ function fileEditState() {
     overrides: { ...(fileOverrides ?? {}) },
     added: (fileAddedNodes ?? []).map((s) => ({ ...s })),
     deleted: [...(fileDeletedIds ?? [])],
+    addedEdges: (fileAddedEdges ?? []).map((e) => ({ ...e })),
+    deletedEdges: (fileDeletedEdges ?? []).map((e) => ({ ...e })),
   };
 }
 
@@ -47,6 +51,8 @@ function loadEditState() {
       overrides: parsed.overrides ?? {},
       added: parsed.added ?? [],
       deleted: parsed.deleted ?? [],
+      addedEdges: parsed.addedEdges ?? [],
+      deletedEdges: parsed.deletedEdges ?? [],
     };
   } catch {
     return fileEditState();
@@ -144,6 +150,23 @@ function getLabelOffset(kind) {
   }
 }
 
+// ---------- Edge resolution ----------
+
+function effectiveParentsOf(childId) {
+  const base = parentsOf(childId);
+  const added = (editState.addedEdges ?? [])
+    .filter((e) => e.to === childId)
+    .map((e) => e.from);
+  const deletedSet = new Set(
+    (editState.deletedEdges ?? [])
+      .filter((e) => e.to === childId)
+      .map((e) => e.from)
+  );
+  return [...new Set([...base, ...added])].filter(
+    (id) => !deletedSet.has(id)
+  );
+}
+
 // ---------- Render ----------
 
 function angleOf(x, y) {
@@ -183,7 +206,7 @@ function appendRootHubEdge(parent, child, classes) {
 
 function drawEdges() {
   for (const skill of skills) {
-    for (const prereqId of parentsOf(skill.id)) {
+    for (const prereqId of effectiveParentsOf(skill.id)) {
       const parent = skillById.get(prereqId);
       if (!parent) continue;
       const isCross = parent.branch !== skill.branch;
@@ -482,6 +505,36 @@ window.tree = {
   },
   unmarkDeleted(id) {
     editState.deleted = editState.deleted.filter((d) => d !== id);
+  },
+
+  // Edge mutations
+  hasEdge(from, to) {
+    return effectiveParentsOf(to).includes(from);
+  },
+  addEdge(from, to) {
+    const ae = editState.addedEdges ?? (editState.addedEdges = []);
+    const de = editState.deletedEdges ?? (editState.deletedEdges = []);
+    // Remove from deletedEdges if previously deleted.
+    editState.deletedEdges = de.filter(
+      (e) => !(e.from === from && e.to === to)
+    );
+    // Only add if not already present in effective set.
+    if (!effectiveParentsOf(to).includes(from)) {
+      ae.push({ from, to });
+    }
+  },
+  removeEdge(from, to) {
+    const ae = editState.addedEdges ?? (editState.addedEdges = []);
+    const de = editState.deletedEdges ?? (editState.deletedEdges = []);
+    const isBase = parentsOf(to).includes(from);
+    // Remove from addedEdges if it was a custom addition.
+    editState.addedEdges = ae.filter(
+      (e) => !(e.from === from && e.to === to)
+    );
+    // Tombstone base edges so they stay removed after reload.
+    if (isBase && !de.some((e) => e.from === from && e.to === to)) {
+      de.push({ from, to });
+    }
   },
 
   // Pending-state persistence (used by the editor on save success/failure)

@@ -576,6 +576,37 @@ body.is-editing .tooltip {
   flex-shrink: 0;
 }
 
+/* ---------- Connect mode ---------- */
+
+/* Active Connect button */
+#editor-connect[aria-pressed="true"] {
+  background: rgba(139, 92, 246, 0.35);
+  border-color: rgba(139, 92, 246, 0.65);
+  color: #ddd6fe;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+
+/* Source node highlight */
+body.is-connecting .node.is-connect-source circle {
+  stroke: #fff;
+  stroke-dasharray: none;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 10px #fff);
+}
+
+/* Cursor hint while in connect mode */
+body.is-connecting #tree {
+  cursor: crosshair;
+}
+
+/* Preview edge */
+#connect-preview {
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 2;
+  stroke-dasharray: 8 4;
+  pointer-events: none;
+}
+
 /* ---------- Basic responsive ---------- */
 
 @media (max-width: 720px) {
