@@ -573,6 +573,13 @@ body.is-editing .tooltip {
   gap: 8px;
 }
 
+.editor-code-panel__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .editor-code-panel__header h2 {
   margin: 0;
   font-size: 13px;
@@ -580,6 +587,26 @@ body.is-editing .tooltip {
   font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.editor-code-status {
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-code-status[data-state="dirty"],
+.editor-code-status[data-state="saving"] {
+  color: var(--spec-accent);
+}
+
+.editor-code-status[data-state="saved"] {
+  color: var(--branch-modeling);
+}
+
+.editor-code-status[data-state="error"] {
+  color: var(--branch-finance);
 }
 
 .editor-code-panel__header-actions {

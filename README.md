@@ -10,19 +10,22 @@ RPG-style **circular** skill tree for quant career competencies. Three branches 
 
 ## How to open
 
-Double-click `run.bat`, or `python -m http.server 8000` → `http://localhost:8000`.
+Double-click `run.bat`, or run `python server.py 8000` → `http://localhost:8000`.
+
+`run.bat` launches `server.py`, a tiny local server that both serves the static files and accepts auto-save writes to `data/overrides.js` from the in-app editor.
 
 ## Structure
 
 ```
   index.html
   main.js                # render + pan/zoom + tooltip + tree API
-  editor.js              # edit mode (drag, CRUD, side panel, live code panel)
+  editor.js              # edit mode (drag, CRUD, side panel, live code panel, auto-save)
   styles.css
+  server.py              # static server + PUT /data/overrides.js (auto-save target)
   data/skills.js         # base node metadata
   data/relationships.js  # explicit graph edges (nearby parent-child links)
   data/layout.js         # circular radial positions
-  data/overrides.js      # committed manual overrides on top of auto-layout
+  data/overrides.js      # committed manual overrides on top of auto-layout (auto-saved)
   run.bat
 ```
 
@@ -74,15 +77,25 @@ The tree ships with an in-app editor for tweaking node positions and metadata wi
 
 Edges/relationships are intentionally **not** editable from the UI. Edit `data/relationships.js` directly if you need to wire new nodes up.
 
-### Persistence
+### Persistence: auto-save to `data/overrides.js`
 
-All edits live in `localStorage` under the key `matriz-edits` and are reload-safe across sessions. Every change is structural and persisted automatically — there is no per-session "discard" button. To start clean, commit your edits via the **Code** panel and clear the browser's site data if you want a blank slate.
+When you launch the app via `run.bat` (or `python server.py 8000`), every edit auto-saves to `data/overrides.js` on disk via a debounced HTTP `PUT` to the local server. The **Code** panel header shows the live status: `Saving...`, `Saved 22:14:07`, or `Save failed` if the server is not available.
+
+That means once you are happy with your tree, you can simply commit:
+
+```bash
+git add data/overrides.js
+git commit -m "Update skill tree overrides"
+git push
+```
+
+The previous-session edits also remain in `localStorage` (key `matriz-edits`) as a backup — useful if you ever open the page without the local server.
 
 ### Live overrides code
 
-Click **Code** in the toolbar to slide in a left-side panel showing the live `data/overrides.js` content. The textarea updates after every drag, metadata edit, add or delete. Click **Copy** and paste over `data/overrides.js` to commit your changes — the file overrides keep applying after reload.
+Click **Code** in the toolbar to slide in a left-side panel showing the live `data/overrides.js` content. The textarea updates after every drag, metadata edit, add or delete; the **Copy** button is still there as a fallback if you want to paste somewhere else.
 
-New nodes you create via **Add node** stay in `localStorage` (they are not exported as code). To promote a custom node into source, copy its data manually into `data/skills.js` and add edges in `data/relationships.js` if needed.
+New nodes you create via **Add node** stay in `localStorage` only — they are **not** auto-saved to `data/overrides.js`, because that file is for overrides on top of base nodes. To promote a custom node into source, copy its data manually into `data/skills.js` and add edges in `data/relationships.js`.
 
 ### Out of scope
 

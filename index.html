@@ -132,7 +132,18 @@
         aria-label="Live overrides.js code"
       >
         <div class="editor-code-panel__header">
-          <h2>data/overrides.js</h2>
+          <div class="editor-code-panel__title">
+            <h2>data/overrides.js</h2>
+            <span
+              id="editor-code-status"
+              class="editor-code-status"
+              data-state="idle"
+              role="status"
+              aria-live="polite"
+            >
+              Auto-save ready
+            </span>
+          </div>
           <div class="editor-code-panel__header-actions">
             <button id="editor-code-copy" type="button" class="editor-btn">
               Copy
