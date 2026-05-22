@@ -18,6 +18,24 @@ export const overrides = {
 };
 
 export const addedNodes = [
+  {
+    id: "custom-cross-1",
+    label: "teste",
+    branch: "finance",
+    kind: "detail",
+    x: 1459,
+    y: 829,
+    desc: "",
+  },
+  {
+    id: "custom-finance-1",
+    label: "teste 2",
+    branch: "finance",
+    kind: "detail",
+    x: 1482,
+    y: 885,
+    desc: "",
+  },
 ];
 
 export const deletedIds = [
