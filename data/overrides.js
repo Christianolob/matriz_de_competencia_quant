@@ -14,6 +14,9 @@
  */
 
 export const overrides = {
+  "cloud-compute": { x: 511, y: 855 },
+  "cloud-storage": { x: 619, y: 833 },
+  "markets-microstructure": { x: 1270, y: 1160 },
   "math-real-analysis": { x: 1562, y: 354 },
   "opt-mip": { x: 801, y: 662 },
   "opt-numerical": { x: 915, y: 663 },
@@ -21,24 +24,6 @@ export const overrides = {
 };
 
 export const addedNodes = [
-  {
-    id: "custom-cross-1",
-    label: "teste",
-    branch: "finance",
-    kind: "detail",
-    x: 1459,
-    y: 829,
-    desc: "",
-  },
-  {
-    id: "custom-finance-1",
-    label: "teste 2",
-    branch: "finance",
-    kind: "detail",
-    x: 1482,
-    y: 885,
-    desc: "",
-  },
 ];
 
 export const deletedIds = [
@@ -47,8 +32,25 @@ export const deletedIds = [
 
 export const addedEdges = [
   { from: "backend-db-nosql", to: "backend-microservices" },
+  { from: "cross-ml", to: "ds-hub" },
+  { from: "cross-pricing", to: "qf-factor-models" },
+  { from: "cross-pricing", to: "qf-fin-econ" },
+  { from: "cross-pricing", to: "qf-portfolio" },
+  { from: "cross-pricing", to: "qf-risk-models" },
+  { from: "cross-trading", to: "ft-algo-trading" },
+  { from: "cross-trading", to: "ft-backtesting" },
+  { from: "cross-trading", to: "ft-execution" },
+  { from: "ds-hub", to: "ds-deep-learning" },
+  { from: "ds-hub", to: "ds-eda" },
+  { from: "ds-hub", to: "ds-feature-eng" },
+  { from: "ds-hub", to: "ds-mlops" },
+  { from: "ds-hub", to: "ds-stats-learning" },
+  { from: "ds-hub", to: "ds-supervised" },
+  { from: "ds-hub", to: "ds-unsupervised" },
+  { from: "fin-econ", to: "qf-portfolio" },
   { from: "math-real-analysis", to: "stats-bayesian" },
   { from: "math-real-analysis", to: "stats-timeseries" },
+  { from: "qf-factor-models", to: "math-abstract-algebra" },
   { from: "stoc-poisson", to: "opt-numerical" },
 ];
 

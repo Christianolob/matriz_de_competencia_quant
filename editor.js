@@ -290,20 +290,20 @@ function initEditor() {
     const edges = tree.edgesLayer.querySelectorAll(
       `[data-from="${cssEscape(id)}"], [data-to="${cssEscape(id)}"]`
     );
-    edges.forEach((edge) => {
-      if (edge.tagName.toLowerCase() === "line") {
-        const fromId = edge.getAttribute("data-from");
-        const toId = edge.getAttribute("data-to");
-        const from = tree.getSkillById(fromId);
-        const to = tree.getSkillById(toId);
-        if (!from || !to) return;
-        edge.setAttribute("x1", String(from.x));
-        edge.setAttribute("y1", String(from.y));
-        edge.setAttribute("x2", String(to.x));
-        edge.setAttribute("y2", String(to.y));
-      } else {
-        scheduleFullRedraw();
-      }
+    edges.forEach((edgeGroup) => {
+      const fromId = edgeGroup.getAttribute("data-from");
+      const toId = edgeGroup.getAttribute("data-to");
+      const from = tree.getSkillById(fromId);
+      const to = tree.getSkillById(toId);
+      if (!from || !to) return;
+      const lines = edgeGroup.querySelectorAll("line");
+      if (lines.length === 0) { scheduleFullRedraw(); return; }
+      lines.forEach((line) => {
+        line.setAttribute("x1", String(from.x));
+        line.setAttribute("y1", String(from.y));
+        line.setAttribute("x2", String(to.x));
+        line.setAttribute("y2", String(to.y));
+      });
     });
 
     if (selectedId === id) {
@@ -338,7 +338,7 @@ function initEditor() {
     }
 
     const node = event.target.closest(".node");
-    const clickedEdge = event.target.closest(".edge");
+    const clickedEdge = event.target.closest(".edge-group");
 
     // In connect mode, clicking directly on an edge (not the preview) deletes it.
     if (connectMode && clickedEdge && clickedEdge.id !== "connect-preview") {

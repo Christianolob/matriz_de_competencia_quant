@@ -105,6 +105,116 @@ function rebuildSkills() {
   skillById = new Map(skills.map((s) => [s.id, s]));
 }
 
+// ---------- Domain / color helpers ----------
+
+const DOMAIN_RGB = {
+  modeling:   [34, 197, 94],
+  technology: [59, 130, 246],
+  finance:    [239, 68, 68],
+};
+
+const DOMAIN_HEX = {
+  modeling:   "#22c55e",
+  technology: "#3b82f6",
+  finance:    "#ef4444",
+};
+
+// Pre-designed zone colors for 50/50 two-domain mixes.
+// Raw RGB average gives olive for red+green; these anchors look correct.
+const ZONE_RGB = {
+  "modeling+technology": [45, 212, 191],   // teal  #2dd4bf
+  "technology+finance":  [168, 85, 247],   // purple #a855f7
+  "modeling+finance":    [245, 158, 11],   // amber  #f59e0b
+};
+
+/** Returns the effective domains object for a skill. */
+function getEffectiveDomains(skill) {
+  if (skill.domains) return skill.domains;
+  if (skill.branch === "modeling")   return { modeling: 1 };
+  if (skill.branch === "technology") return { technology: 1 };
+  if (skill.branch === "finance")    return { finance: 1 };
+  return { modeling: 0.34, technology: 0.33, finance: 0.33 };
+}
+
+/** Returns a CSS rgb() color for a domains object. */
+function getMixedColor(domains) {
+  const keys = Object.keys(domains).sort();
+  const total = Object.values(domains).reduce((s, v) => s + v, 0);
+
+  if (keys.length === 1) {
+    const [r, g, b] = DOMAIN_RGB[keys[0]] ?? [128, 128, 128];
+    return `rgb(${r},${g},${b})`;
+  }
+
+  if (keys.length === 2) {
+    const zoneKey = keys.join("+");
+    const zone = ZONE_RGB[zoneKey];
+    if (zone) {
+      // Interpolate: at 50/50 use zone color; skewed → lean toward dominant domain.
+      const w0 = domains[keys[0]] / total;
+      const w1 = domains[keys[1]] / total;
+      const balance = 1 - Math.abs(w0 - w1) * 2; // 1 at 50/50, 0 at extremes
+      const domKey = w0 >= w1 ? keys[0] : keys[1];
+      const dom = DOMAIN_RGB[domKey] ?? [128, 128, 128];
+      const r = Math.round(zone[0] * balance + dom[0] * (1 - balance));
+      const g = Math.round(zone[1] * balance + dom[1] * (1 - balance));
+      const b = Math.round(zone[2] * balance + dom[2] * (1 - balance));
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+
+  // Three-domain or fallback: weighted average
+  let r = 0, g = 0, b = 0;
+  for (const [domain, weight] of Object.entries(domains)) {
+    const [dr, dg, db] = DOMAIN_RGB[domain] ?? [128, 128, 128];
+    r += dr * (weight / total);
+    g += dg * (weight / total);
+    b += db * (weight / total);
+  }
+  // Near-equal weights → push toward white (Quant apex)
+  const weights = Object.values(domains);
+  const maxDiff = Math.max(...weights) - Math.min(...weights);
+  if (maxDiff < 0.12) return "#e2e8f0";
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+
+/** Draws a colored arc ring outside a circle to show domain percentages. */
+function drawDomainRing(g, cx, cy, radius, domains) {
+  const total = Object.values(domains).reduce((s, v) => s + v, 0);
+  const ringR = radius + 6;
+  const GAP_DEG = 4;
+  const entries = Object.entries(domains).filter(([, w]) => w / total > 0.02);
+  const useGap = entries.length > 1;
+
+  let angleDeg = -90; // start at top
+  for (const [domain, weight] of entries) {
+    const sweep = (weight / total) * 360;
+    const arcSweep = useGap ? sweep - GAP_DEG : sweep;
+    if (arcSweep <= 0) continue;
+
+    const startRad = (angleDeg * Math.PI) / 180;
+    const endRad   = ((angleDeg + arcSweep) * Math.PI) / 180;
+    const x1 = cx + ringR * Math.cos(startRad);
+    const y1 = cy + ringR * Math.sin(startRad);
+    const x2 = cx + ringR * Math.cos(endRad);
+    const y2 = cy + ringR * Math.sin(endRad);
+    const largeArc = arcSweep > 180 ? 1 : 0;
+
+    const path = arcSweep >= 359
+      ? `M ${cx - ringR} ${cy} A ${ringR} ${ringR} 0 1 1 ${cx - ringR + 0.001} ${cy}`
+      : `M ${x1} ${y1} A ${ringR} ${ringR} 0 ${largeArc} 1 ${x2} ${y2}`;
+
+    el("path", {
+      d: path,
+      class: "domain-ring",
+      stroke: DOMAIN_HEX[domain] ?? "#fff",
+      fill: "none",
+    }, g);
+
+    angleDeg += sweep;
+  }
+}
+
 // ---------- SVG helpers ----------
 
 function el(name, attrs = {}, parent = null) {
@@ -182,7 +292,7 @@ function arcPoint(r, deg) {
 }
 
 /** Root→hub: arc on the outer ring so spokes do not cross sibling hubs. */
-function appendRootHubEdge(parent, child, classes) {
+function appendRootHubEdge(parent, child) {
   const a0 = angleOf(parent.x, parent.y);
   const a1 = angleOf(child.x, child.y);
   let delta = a1 - a0;
@@ -191,17 +301,13 @@ function appendRootHubEdge(parent, child, classes) {
   const mid = arcPoint(getRadius("root"), a0 + delta / 2);
   const endArc = arcPoint(getRadius("root"), a1);
   const d = `M ${parent.x} ${parent.y} Q ${mid.x} ${mid.y} ${endArc.x} ${endArc.y} L ${child.x} ${child.y}`;
-  el(
-    "path",
-    {
-      d,
-      class: classes.join(" "),
-      "data-from": parent.id,
-      "data-to": child.id,
-      fill: "none",
-    },
-    edgesLayer
-  );
+  const g = el("g", {
+    class: "edge-group",
+    "data-from": parent.id,
+    "data-to": child.id,
+  }, edgesLayer);
+  el("path", { d, class: "edge-outer", fill: "none" }, g);
+  el("path", { d, class: "edge-inner", fill: "none" }, g);
 }
 
 function drawEdges() {
@@ -209,34 +315,29 @@ function drawEdges() {
     for (const prereqId of effectiveParentsOf(skill.id)) {
       const parent = skillById.get(prereqId);
       if (!parent) continue;
-      const isCross = parent.branch !== skill.branch;
-      const classes = ["edge", `branch-${parent.branch}`];
-      if (isCross) classes.push("cross");
 
       if (parent.kind === "root" && skill.kind === "hub") {
-        appendRootHubEdge(parent, skill, classes);
+        appendRootHubEdge(parent, skill);
         continue;
       }
 
-      el(
-        "line",
-        {
-          x1: parent.x,
-          y1: parent.y,
-          x2: skill.x,
-          y2: skill.y,
-          class: classes.join(" "),
-          "data-from": parent.id,
-          "data-to": skill.id,
-        },
-        edgesLayer
-      );
+      const g = el("g", {
+        class: "edge-group",
+        "data-from": parent.id,
+        "data-to": skill.id,
+      }, edgesLayer);
+      const coords = { x1: parent.x, y1: parent.y, x2: skill.x, y2: skill.y };
+      el("line", { ...coords, class: "edge-outer" }, g);
+      el("line", { ...coords, class: "edge-inner" }, g);
     }
   }
 }
 
 function drawNodes() {
   for (const skill of skills) {
+    const domains = getEffectiveDomains(skill);
+    const isMixed = Object.keys(domains).length > 1;
+
     const g = el(
       "g",
       {
@@ -246,15 +347,16 @@ function drawNodes() {
       nodesLayer
     );
 
-    el(
-      "circle",
-      {
-        cx: skill.x,
-        cy: skill.y,
-        r: getRadius(skill.kind),
-      },
-      g
-    );
+    const r = getRadius(skill.kind);
+    const circle = el("circle", { cx: skill.x, cy: skill.y, r }, g);
+
+    if (isMixed) {
+      const color = getMixedColor(domains);
+      g.style.color = color;
+      circle.style.fill = color;
+      circle.style.stroke = color;
+      drawDomainRing(g, skill.x, skill.y, r, domains);
+    }
 
     const text = el(
       "text",
@@ -289,6 +391,12 @@ const BRANCH_LABELS = {
   cross: "Hybrid",
 };
 
+const DOMAIN_LABELS = {
+  modeling:   "Modeling",
+  technology: "Technology",
+  finance:    "Finance",
+};
+
 const KIND_LABELS = {
   root: "Branch root",
   hub: "Hub",
@@ -308,12 +416,33 @@ function escapeHtml(s) {
 function showTooltip(skill, event) {
   const branchLabel = BRANCH_LABELS[skill.branch] || skill.branch;
   const kindLabel = KIND_LABELS[skill.kind] || skill.kind;
+  const domains = getEffectiveDomains(skill);
+  const isMixed = Object.keys(domains).length > 1;
+
+  let domainsHtml = "";
+  if (isMixed) {
+    const total = Object.values(domains).reduce((s, v) => s + v, 0);
+    const bars = Object.entries(domains)
+      .sort(([, a], [, b]) => b - a)
+      .map(([d, w]) => {
+        const pct = Math.round((w / total) * 100);
+        const color = DOMAIN_HEX[d] ?? "#fff";
+        return `<span class="tooltip__domain-bar" style="--domain-color:${color};--domain-pct:${pct}%">`
+          + `<span class="tooltip__domain-swatch" style="background:${color}"></span>`
+          + `${escapeHtml(DOMAIN_LABELS[d] ?? d)} ${pct}%`
+          + `</span>`;
+      })
+      .join("");
+    domainsHtml = `<div class="tooltip__domains">${bars}</div>`;
+  }
+
   tooltip.innerHTML = `
     <div class="tooltip__title">${escapeHtml(skill.label)}</div>
     <div class="tooltip__badges">
       <span class="tooltip__badge branch-${skill.branch}">${escapeHtml(branchLabel)}</span>
       <span class="tooltip__badge tooltip__badge--kind kind-${skill.kind}">${escapeHtml(kindLabel)}</span>
     </div>
+    ${domainsHtml}
     <p class="tooltip__desc">${escapeHtml(skill.desc ?? "")}</p>
   `;
   tooltip.classList.add("is-visible");
