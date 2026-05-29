@@ -338,6 +338,21 @@ function initEditor() {
     }
 
     const node = event.target.closest(".node");
+    const clickedEdge = event.target.closest(".edge");
+
+    // In connect mode, clicking directly on an edge (not the preview) deletes it.
+    if (connectMode && clickedEdge && clickedEdge.id !== "connect-preview") {
+      const from = clickedEdge.getAttribute("data-from");
+      const to = clickedEdge.getAttribute("data-to");
+      if (from && to) {
+        tree.removeEdge(from, to);
+        clearConnectSource();
+        removePreviewLine();
+        tree.redraw();
+        scheduleSave();
+      }
+      return;
+    }
 
     if (connectMode) {
       if (!node) {

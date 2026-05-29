@@ -393,6 +393,17 @@ function applyView() {
 }
 
 function clientToWorld(clientX, clientY) {
+  // Use the CTM of a content-layer element so the viewBox transform (pan/zoom)
+  // and preserveAspectRatio letterboxing are both correctly accounted for.
+  const ctm = edgesLayer.getScreenCTM();
+  if (ctm) {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const { x, y } = pt.matrixTransform(ctm.inverse());
+    return { x, y };
+  }
+  // Fallback: coarse approximation when CTM is unavailable.
   const rect = svg.getBoundingClientRect();
   const px = (clientX - rect.left) / rect.width;
   const py = (clientY - rect.top) / rect.height;

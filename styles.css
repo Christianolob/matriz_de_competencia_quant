@@ -599,6 +599,19 @@ body.is-connecting #tree {
   cursor: crosshair;
 }
 
+/* Make edges clickable and give a delete-hint cursor */
+body.is-connecting .edge {
+  pointer-events: stroke;
+  cursor: pointer;
+  stroke-width: 3;
+  transition: stroke-opacity 0.1s;
+}
+
+body.is-connecting .edge:hover {
+  stroke-opacity: 1;
+  stroke-width: 5;
+}
+
 /* Preview edge */
 #connect-preview {
   stroke: rgba(255, 255, 255, 0.45);
