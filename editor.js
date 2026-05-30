@@ -285,6 +285,15 @@ function initEditor() {
           String(y + tree.getLabelOffset(skill.kind))
         );
       }
+      // Domain-ring arcs are paths with absolute coordinates and don't
+      // follow the circle automatically — wipe and redraw them.
+      g.querySelectorAll(".domain-ring").forEach((p) => p.remove());
+      if (tree.getEffectiveDomains && tree.drawDomainRing) {
+        const domains = tree.getEffectiveDomains(skill);
+        if (Object.keys(domains).length > 1) {
+          tree.drawDomainRing(g, x, y, tree.getRadius(skill.kind), domains);
+        }
+      }
     }
 
     const edges = tree.edgesLayer.querySelectorAll(

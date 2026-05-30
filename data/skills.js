@@ -943,4 +943,124 @@ export const skills = [
     prereqs: [],
     domains: { technology: 0.7, finance: 0.3 },
   },
+
+  // ============================================================
+  // TRADING FACTORS — Six classic systematic factors, placed
+  // closer to the Finance branch (right side of the canvas).
+  // Finance-heavy domain mix so they read as red/amber.
+  // prereqs: [] so applyLayout() never repositions them; edges
+  // are added in data/overrides.js (qf-factor-models → factor).
+  // ============================================================
+  {
+    id: "factor-value",
+    label: "Value",
+    branch: "cross",
+    kind: "detail",
+    x: 1970,
+    y: 1340,
+    desc: "Cheap vs expensive: low P/B, low P/E, high earnings yield. Long undervalued / short overvalued.",
+    prereqs: [],
+    domains: { modeling: 0.3, finance: 0.7 },
+  },
+  {
+    id: "factor-momentum",
+    label: "Momentum",
+    branch: "cross",
+    kind: "detail",
+    x: 2070,
+    y: 1210,
+    desc: "Winners keep winning: cross-sectional and time-series momentum, 12-1 lookback.",
+    prereqs: [],
+    domains: { modeling: 0.3, finance: 0.7 },
+  },
+  {
+    id: "factor-size",
+    label: "Size",
+    branch: "cross",
+    kind: "detail",
+    x: 2110,
+    y: 1070,
+    desc: "Small minus Big (SMB): small caps tend to outperform large caps over the long run.",
+    prereqs: [],
+    domains: { modeling: 0.3, finance: 0.7 },
+  },
+  {
+    id: "factor-quality",
+    label: "Quality",
+    branch: "cross",
+    kind: "detail",
+    x: 2090,
+    y: 930,
+    desc: "Profitable, stable, low-leverage firms: ROE, gross profitability, earnings stability.",
+    prereqs: [],
+    domains: { modeling: 0.3, finance: 0.7 },
+  },
+  {
+    id: "factor-low-vol",
+    label: "Low Volatility",
+    branch: "cross",
+    kind: "detail",
+    x: 2010,
+    y: 820,
+    desc: "Low-vol anomaly: low-beta and low-variance stocks earn higher risk-adjusted returns.",
+    prereqs: [],
+    domains: { modeling: 0.3, finance: 0.7 },
+  },
+  {
+    id: "factor-carry",
+    label: "Carry",
+    branch: "cross",
+    kind: "detail",
+    x: 1930,
+    y: 740,
+    desc: "Hold high-yielding assets and fund with low-yielding ones: FX, rates, commodities, equities.",
+    prereqs: [],
+    domains: { modeling: 0.3, finance: 0.7 },
+  },
+
+  // ============================================================
+  // ACCOUNTING — extra concepts beyond the base acc-* hubs.
+  // Pure finance branch; prereqs: [] keeps them where placed.
+  // Edges added in data/overrides.js (fin-acc → concept).
+  // ============================================================
+  {
+    id: "acc-ratios",
+    label: "Financial Ratios",
+    branch: "finance",
+    kind: "detail",
+    x: 1900,
+    y: 1010,
+    desc: "P/E, P/B, ROE, ROA, debt/equity, current ratio, interest coverage.",
+    prereqs: [],
+  },
+  {
+    id: "acc-dcf",
+    label: "DCF Valuation",
+    branch: "finance",
+    kind: "detail",
+    x: 1920,
+    y: 1090,
+    desc: "Discounted cash flow: free cash flow, WACC, terminal value, sensitivity analysis.",
+    prereqs: [],
+  },
+  {
+    id: "acc-ifrs",
+    label: "GAAP / IFRS",
+    branch: "finance",
+    kind: "detail",
+    x: 1900,
+    y: 1180,
+    desc: "Accounting standards, recognition, measurement, disclosure; reconciliation across frameworks.",
+    prereqs: [],
+  },
+  {
+    id: "acc-audit",
+    label: "Auditing",
+    branch: "finance",
+    kind: "detail",
+    x: 1810,
+    y: 1240,
+    desc: "Internal/external audit, materiality, evidence, control testing, going concern.",
+    prereqs: [],
+  },
 ];

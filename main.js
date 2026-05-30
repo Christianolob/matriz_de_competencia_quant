@@ -12,6 +12,7 @@ import {
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const svg = document.getElementById("tree");
+const backgroundLayer = document.getElementById("background-layer");
 const edgesLayer = document.getElementById("edges-layer");
 const nodesLayer = document.getElementById("nodes-layer");
 const tooltip = document.getElementById("tooltip");
@@ -371,13 +372,45 @@ function drawNodes() {
 }
 
 function clearLayers() {
+  while (backgroundLayer.firstChild) backgroundLayer.removeChild(backgroundLayer.firstChild);
   while (edgesLayer.firstChild) edgesLayer.removeChild(edgesLayer.firstChild);
   while (nodesLayer.firstChild) nodesLayer.removeChild(nodesLayer.firstChild);
+}
+
+// Career-level rings drawn behind everything else. Outermost = Junior
+// (broadest, entry-level coverage); innermost is intentionally unnamed
+// — the peak that goes beyond formal titles.
+const CAREER_RINGS = [
+  { id: "junior",  label: "Junior",  r: 980, color: "#b87333" }, // bronze
+  { id: "pleno",   label: "Pleno",   r: 720, color: "#94a3b8" }, // silver
+  { id: "senior",  label: "Senior",  r: 440, color: "#facc15" }, // gold
+  { id: "master",  label: "?",       r: 180, color: "#a78bfa" }, // mystery violet
+];
+
+function drawBackground() {
+  for (const ring of CAREER_RINGS) {
+    el("circle", {
+      cx: CX,
+      cy: CY,
+      r: ring.r,
+      class: `career-ring career-ring--${ring.id}`,
+      stroke: ring.color,
+    }, backgroundLayer);
+
+    const t = el("text", {
+      x: CX,
+      y: CY - ring.r + 22,
+      class: "career-label",
+      fill: ring.color,
+    }, backgroundLayer);
+    t.textContent = ring.label;
+  }
 }
 
 function redraw() {
   rebuildSkills();
   clearLayers();
+  drawBackground();
   drawEdges();
   drawNodes();
 }
@@ -689,6 +722,10 @@ window.tree = {
   viewportCenterWorld,
   getRadius,
   getLabelOffset,
+
+  // Decorations (used by editor to keep domain rings in sync while dragging)
+  getEffectiveDomains,
+  drawDomainRing,
 
   // Layers (so the editor can patch in place during drag)
   edgesLayer,

@@ -256,6 +256,31 @@ body {
   }
 }
 
+/* Career-level rings (background, concentric) */
+
+.career-ring {
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 6 8;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.career-ring--master {
+  stroke-dasharray: 2 6;
+  opacity: 0.32;
+}
+
+.career-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-anchor: middle;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 /* Domain ring indicator (arcs outside mixed-domain circles) */
 
 .domain-ring {
