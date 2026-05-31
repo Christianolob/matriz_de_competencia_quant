@@ -259,16 +259,15 @@ body {
 /* Career-level rings (background, concentric) */
 
 .career-ring {
-  fill: none;
   stroke-width: 2;
   stroke-dasharray: 6 8;
-  opacity: 0.22;
+  stroke-opacity: 0.22;
   pointer-events: none;
 }
 
 .career-ring--master {
   stroke-dasharray: 2 6;
-  opacity: 0.32;
+  stroke-opacity: 0.32;
 }
 
 .career-label {

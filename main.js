@@ -280,47 +280,11 @@ function effectiveParentsOf(childId) {
 
 // ---------- Render ----------
 
-function angleOf(x, y) {
-  return (Math.atan2(CY - y, x - CX) * 180) / Math.PI;
-}
-
-function arcPoint(r, deg) {
-  const rad = (deg * Math.PI) / 180;
-  return {
-    x: CX + r * Math.cos(rad),
-    y: CY - r * Math.sin(rad),
-  };
-}
-
-/** Root→hub: arc on the outer ring so spokes do not cross sibling hubs. */
-function appendRootHubEdge(parent, child) {
-  const a0 = angleOf(parent.x, parent.y);
-  const a1 = angleOf(child.x, child.y);
-  let delta = a1 - a0;
-  while (delta > 180) delta -= 360;
-  while (delta < -180) delta += 360;
-  const mid = arcPoint(getRadius("root"), a0 + delta / 2);
-  const endArc = arcPoint(getRadius("root"), a1);
-  const d = `M ${parent.x} ${parent.y} Q ${mid.x} ${mid.y} ${endArc.x} ${endArc.y} L ${child.x} ${child.y}`;
-  const g = el("g", {
-    class: "edge-group",
-    "data-from": parent.id,
-    "data-to": child.id,
-  }, edgesLayer);
-  el("path", { d, class: "edge-outer", fill: "none" }, g);
-  el("path", { d, class: "edge-inner", fill: "none" }, g);
-}
-
 function drawEdges() {
   for (const skill of skills) {
     for (const prereqId of effectiveParentsOf(skill.id)) {
       const parent = skillById.get(prereqId);
       if (!parent) continue;
-
-      if (parent.kind === "root" && skill.kind === "hub") {
-        appendRootHubEdge(parent, skill);
-        continue;
-      }
 
       const g = el("g", {
         class: "edge-group",
@@ -381,10 +345,10 @@ function clearLayers() {
 // (broadest, entry-level coverage); innermost is intentionally unnamed
 // — the peak that goes beyond formal titles.
 const CAREER_RINGS = [
-  { id: "junior",  label: "Junior",  r: 980, color: "#b87333" }, // bronze
-  { id: "pleno",   label: "Pleno",   r: 720, color: "#94a3b8" }, // silver
-  { id: "senior",  label: "Senior",  r: 440, color: "#facc15" }, // gold
-  { id: "master",  label: "?",       r: 180, color: "#a78bfa" }, // mystery violet
+  { id: "junior",  label: "Junior",  r: 2400, color: "#b87333", fill: "#1B1515" }, // bronze
+  { id: "pleno",   label: "Pleno",   r: 1800, color: "#94a3b8", fill: "#18191F" }, // silver
+  { id: "senior",  label: "Senior",  r: 1200, color: "#facc15", fill: "#201C12" }, // gold
+  { id: "master",  label: "?",       r: 560,  color: "#a78bfa", fill: "#191725" }, // mystery violet
 ];
 
 function drawBackground() {
@@ -395,6 +359,7 @@ function drawBackground() {
       r: ring.r,
       class: `career-ring career-ring--${ring.id}`,
       stroke: ring.color,
+      fill: ring.fill,
     }, backgroundLayer);
 
     const t = el("text", {
@@ -545,7 +510,7 @@ function attachHover() {
 
 const view = { x: 0, y: 0, w: WORLD.w, h: WORLD.h };
 const ZOOM_MIN = 0.35;
-const ZOOM_MAX = 2.5;
+const ZOOM_MAX = 6;
 let panning = false;
 let panStart = null;
 let viewStart = null;

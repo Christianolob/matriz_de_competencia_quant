@@ -14,17 +14,42 @@
  */
 
 export const overrides = {
+  "acc-corp": { x: 1732, y: 1049 },
+  "acc-tax": { x: 1652, y: 1044 },
   "cloud-compute": { x: 511, y: 855 },
+  "cloud-ml": { x: 835, y: 774 },
   "cloud-storage": { x: 619, y: 833 },
   "data-streaming": { x: 1064, y: 1202 },
+  "ds-deep-learning": { x: 440, y: 690 },
+  "ds-eda": { x: 451, y: 544 },
+  "ds-feature-eng": { x: 435, y: 622 },
+  "ds-mlops": { x: 468, y: 752 },
+  "ds-stats-learning": { x: 557, y: 396 },
+  "ds-supervised": { x: 457, y: 427 },
+  "ds-unsupervised": { x: 569, y: 780 },
+  "econ-econometrics": { x: 1657, y: 930 },
+  "econ-macro": { x: 1754, y: 866 },
+  "econ-micro": { x: 1708, y: 921 },
+  "econ-monetary": { x: 1642, y: 846 },
   "factor-carry": { x: 1475, y: 629 },
   "factor-low-vol": { x: 1725, y: 549 },
+  "factor-momentum": { x: 1417, y: 1001 },
+  "factor-quality": { x: 1483, y: 1013 },
+  "factor-size": { x: 1569, y: 1028 },
+  "factor-value": { x: 1353, y: 981 },
+  "fin-alt": { x: 2086, y: 1143 },
+  "fin-root": { x: 3363, y: 2413 },
   "markets-derivatives": { x: 1420, y: 1304 },
   "markets-microstructure": { x: 1270, y: 1160 },
   "math-real-analysis": { x: 1562, y: 354 },
-  "opt-mip": { x: 801, y: 662 },
+  "mod-pure-math": { x: 1200, y: 105 },
+  "mod-root": { x: 1236, y: -1694 },
+  "opt-mip": { x: 870, y: 639 },
   "opt-numerical": { x: 915, y: 663 },
   "opt-stochastic": { x: 843, y: 587 },
+  "qf-portfolio": { x: 1661, y: 749 },
+  "stats-regression": { x: 1171, y: 603 },
+  "tec-root": { x: -1248, y: 2026 },
 };
 
 export const addedNodes = [
@@ -43,6 +68,7 @@ export const addedEdges = [
   { from: "cross-trading", to: "ft-algo-trading" },
   { from: "cross-trading", to: "ft-backtesting" },
   { from: "cross-trading", to: "ft-execution" },
+  { from: "ds-hub", to: "cross-ml" },
   { from: "ds-hub", to: "ds-deep-learning" },
   { from: "ds-hub", to: "ds-eda" },
   { from: "ds-hub", to: "ds-feature-eng" },
@@ -70,6 +96,5 @@ export const addedEdges = [
 export const deletedEdges = [
   { from: "fin-root", to: "fin-markets" },
   { from: "markets-derivatives", to: "cross-pricing" },
-  { from: "mod-root", to: "mod-pure-math" },
   { from: "tec-root", to: "tec-cloud" },
 ];
