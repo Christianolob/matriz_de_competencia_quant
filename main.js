@@ -377,7 +377,7 @@ const CAREER_RINGS = [
   { id: "junior",  label: "Junior",  r: 2400, color: "#b87333", fill: "#1B1515" }, // bronze
   { id: "pleno",   label: "Pleno",   r: 1800, color: "#94a3b8", fill: "#18191F" }, // silver
   { id: "senior",  label: "Senior",  r: 1200, color: "#facc15", fill: "#201C12" }, // gold
-  { id: "master",  label: "?",       r: 560,  color: "#a78bfa", fill: "#191725" }, // mystery violet
+  { id: "master",  label: "Quant",   r: 560,  color: "#a78bfa", fill: "#191725" }, // mystery violet
 ];
 
 function drawBackground() {
