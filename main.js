@@ -12,6 +12,7 @@ import {
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const svg = document.getElementById("tree");
+const defsLayer = document.getElementById("defs-layer");
 const backgroundLayer = document.getElementById("background-layer");
 const edgesLayer = document.getElementById("edges-layer");
 const nodesLayer = document.getElementById("nodes-layer");
@@ -179,6 +180,26 @@ function getMixedColor(domains) {
   return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
 }
 
+/**
+ * Returns a gradient URL that splits the fill into two halves, one per domain.
+ * Hard stop at 50% so the colors don't blend.
+ */
+function ensureSplitGradient(domains) {
+  const keys = Object.keys(domains).sort();
+  if (keys.length !== 2) return null;
+  const id = `split-${keys[0]}-${keys[1]}`;
+  if (defsLayer.querySelector(`#${id}`)) return id;
+
+  const grad = el("linearGradient", {
+    id,
+    x1: "0%", y1: "0%",
+    x2: "100%", y2: "0%",
+  }, defsLayer);
+  el("stop", { offset: "50%", "stop-color": DOMAIN_HEX[keys[0]] }, grad);
+  el("stop", { offset: "50%", "stop-color": DOMAIN_HEX[keys[1]] }, grad);
+  return id;
+}
+
 /** Draws a colored arc ring outside a circle to show domain percentages. */
 function drawDomainRing(g, cx, cy, radius, domains) {
   const total = Object.values(domains).reduce((s, v) => s + v, 0);
@@ -316,10 +337,18 @@ function drawNodes() {
     const circle = el("circle", { cx: skill.x, cy: skill.y, r }, g);
 
     if (isMixed) {
-      const color = getMixedColor(domains);
-      g.style.color = color;
-      circle.style.fill = color;
-      circle.style.stroke = color;
+      const keys = Object.keys(domains);
+      if (keys.length === 2) {
+        const gradId = ensureSplitGradient(domains);
+        circle.style.fill = `url(#${gradId})`;
+        circle.style.stroke = "#e2e8f0";
+        g.style.color = "#e2e8f0";
+      } else {
+        const color = getMixedColor(domains);
+        g.style.color = color;
+        circle.style.fill = color;
+        circle.style.stroke = color;
+      }
       drawDomainRing(g, skill.x, skill.y, r, domains);
     }
 
@@ -546,11 +575,14 @@ function attachPanZoom() {
     "wheel",
     (event) => {
       event.preventDefault();
+      const currentScale = view.w / WORLD.w;
       const factor = event.deltaY > 0 ? 1.15 : 1 / 1.15;
       const scale = Math.max(
         ZOOM_MIN,
-        Math.min(ZOOM_MAX, (view.w * factor) / WORLD.w)
+        Math.min(ZOOM_MAX, currentScale * factor)
       );
+      // Already at the limit — don't shift the view sideways.
+      if (scale === currentScale) return;
       const newW = WORLD.w * scale;
       const newH = WORLD.h * scale;
 
@@ -571,6 +603,8 @@ function attachPanZoom() {
     // The editor may consume empty-area clicks for "create node" flows;
     // it sets data-suppress-pan on the body in that case.
     if (document.body.dataset.suppressPan === "1") return;
+    // In edit mode, Shift+drag on empty area is reserved for marquee select.
+    if (event.shiftKey && document.body.classList.contains("is-editing")) return;
     panning = true;
     panStart = { x: event.clientX, y: event.clientY };
     viewStart = { ...view };

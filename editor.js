@@ -3,10 +3,16 @@
  *
  * Toggle with the "E" key or the toolbar button. While in edit mode:
  *  - Click a node to select it; the side panel shows its metadata.
- *  - Drag a node to move it.
+ *  - Drag a node to move it. If multiple nodes are selected, drag any one
+ *    of them to move the whole group while preserving relative positions.
+ *  - Shift+click a node to add/remove it from the selection.
+ *  - Shift+drag on empty background draws a marquee that selects every
+ *    node whose center falls inside the rectangle.
  *  - "Add node" creates a new circle at the viewport center.
  *  - The side panel lets you edit label, branch, kind, description.
- *  - Delete removes the node (added nodes are erased; base nodes are tombstoned).
+ *    It only shows when exactly one node is selected.
+ *  - Delete removes the selected node(s) (added nodes are erased; base
+ *    nodes are tombstoned).
  *  - "Connect" enters connection mode: click source node, then click target to
  *    add or remove an edge. Escape cancels. Clicking background clears selection.
  *
@@ -47,13 +53,18 @@ function initEditor() {
 
   if (!toolbar || !toggleBtn) return; // UI not present, do nothing.
 
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
   // ---------- State ----------
 
   let editing = false;
-  let selectedId = null;
+  let selectedIds = new Set();
+  let anchorId = null; // most recently focused; drives the side panel
   let dragging = null;
+  let marquee = null;
   let lastBranch = "modeling";
   let suppressNextClick = false;
+  let clipboard = []; // snapshots from the last Ctrl+C, positioned relative to the first item
 
   // Connect mode state
   let connectMode = false;
@@ -79,30 +90,68 @@ function initEditor() {
     if (!editing) {
       clearSelection();
       setConnectMode(false);
+      endMarquee(true);
     }
+  }
+
+  function nodeElement(id) {
+    return tree.nodesLayer.querySelector(`[data-id="${cssEscape(id)}"]`);
   }
 
   function clearSelection() {
-    if (selectedId) {
-      const node = tree.nodesLayer.querySelector(
-        `[data-id="${cssEscape(selectedId)}"]`
-      );
+    for (const id of selectedIds) {
+      const node = nodeElement(id);
       if (node) node.classList.remove("is-selected");
     }
-    selectedId = null;
-    panel.classList.remove("is-open");
+    selectedIds.clear();
+    anchorId = null;
+    updatePanelForSelection();
   }
 
-  function selectNode(id) {
-    if (selectedId === id) return;
-    clearSelection();
-    selectedId = id;
-    const node = tree.nodesLayer.querySelector(
-      `[data-id="${cssEscape(id)}"]`
-    );
+  function addToSelection(id) {
+    if (selectedIds.has(id)) return;
+    selectedIds.add(id);
+    const node = nodeElement(id);
     if (node) node.classList.add("is-selected");
-    fillPanel(id);
-    panel.classList.add("is-open");
+  }
+
+  function removeFromSelection(id) {
+    if (!selectedIds.has(id)) return;
+    selectedIds.delete(id);
+    const node = nodeElement(id);
+    if (node) node.classList.remove("is-selected");
+    if (anchorId === id) {
+      anchorId = selectedIds.size > 0 ? [...selectedIds][selectedIds.size - 1] : null;
+    }
+  }
+
+  function selectOnly(id) {
+    for (const sid of [...selectedIds]) {
+      if (sid !== id) removeFromSelection(sid);
+    }
+    addToSelection(id);
+    anchorId = id;
+    updatePanelForSelection();
+  }
+
+  function toggleSelection(id) {
+    if (selectedIds.has(id)) {
+      removeFromSelection(id);
+    } else {
+      addToSelection(id);
+      anchorId = id;
+    }
+    updatePanelForSelection();
+  }
+
+  function updatePanelForSelection() {
+    if (selectedIds.size === 1) {
+      const [only] = selectedIds;
+      fillPanel(only);
+      panel.classList.add("is-open");
+    } else {
+      panel.classList.remove("is-open");
+    }
   }
 
   function fillPanel(id) {
@@ -130,6 +179,76 @@ function initEditor() {
     return String(s).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
   }
 
+  // ---------- Copy / paste / rename ----------
+
+  function isTypingTarget(t) {
+    return (
+      t &&
+      (t.tagName === "INPUT" ||
+        t.tagName === "TEXTAREA" ||
+        t.tagName === "SELECT" ||
+        t.isContentEditable)
+    );
+  }
+
+  function copySelection() {
+    if (selectedIds.size === 0) return;
+    const skills = [...selectedIds]
+      .map((id) => tree.getSkillById(id))
+      .filter(Boolean);
+    if (skills.length === 0) return;
+    const ox = skills[0].x;
+    const oy = skills[0].y;
+    clipboard = skills.map((s) => ({
+      label: s.label ?? "",
+      branch: s.branch ?? "modeling",
+      kind: s.kind ?? "detail",
+      desc: s.desc ?? "",
+      rx: (s.x ?? 0) - ox,
+      ry: (s.y ?? 0) - oy,
+    }));
+  }
+
+  function pasteClipboard() {
+    if (clipboard.length === 0) return;
+    const center = tree.viewportCenterWorld();
+    const newIds = [];
+    for (const entry of clipboard) {
+      const branch = entry.branch || "modeling";
+      let n = 1;
+      let id;
+      do {
+        id = `custom-${branch}-${n++}`;
+      } while (tree.getSkillById(id));
+      const node = {
+        id,
+        label: entry.label,
+        branch: entry.branch,
+        kind: entry.kind,
+        desc: entry.desc,
+        x: Math.round(center.x + entry.rx),
+        y: Math.round(center.y + entry.ry),
+      };
+      tree.addNode(node);
+      newIds.push(id);
+    }
+    tree.redraw();
+    clearSelection();
+    for (const id of newIds) addToSelection(id);
+    if (newIds.length > 0) anchorId = newIds[newIds.length - 1];
+    updatePanelForSelection();
+    scheduleSave();
+  }
+
+  function beginRenameSelected() {
+    if (selectedIds.size !== 1 || !anchorId) return;
+    panel.classList.add("is-open");
+    // Ensure the panel is populated for the anchor before focusing.
+    fillPanel(anchorId);
+    inputLabel.focus();
+    inputLabel.select();
+  }
+
   // ---------- Connect mode ----------
 
   function setConnectMode(on) {
@@ -144,9 +263,7 @@ function initEditor() {
 
   function clearConnectSource() {
     if (connectSource) {
-      const g = tree.nodesLayer.querySelector(
-        `[data-id="${cssEscape(connectSource)}"]`
-      );
+      const g = nodeElement(connectSource);
       if (g) g.classList.remove("is-connect-source");
     }
     connectSource = null;
@@ -155,7 +272,7 @@ function initEditor() {
   function setConnectSource(id) {
     clearConnectSource();
     connectSource = id;
-    const g = tree.nodesLayer.querySelector(`[data-id="${cssEscape(id)}"]`);
+    const g = nodeElement(id);
     if (g) g.classList.add("is-connect-source");
   }
 
@@ -173,7 +290,6 @@ function initEditor() {
       return;
     }
     if (!previewLine) {
-      const SVG_NS = "http://www.w3.org/2000/svg";
       previewLine = document.createElementNS(SVG_NS, "line");
       previewLine.id = "connect-preview";
       previewLine.setAttribute("pointer-events", "none");
@@ -192,13 +308,91 @@ function initEditor() {
     previewLine = null;
   }
 
+  // ---------- Marquee selection ----------
+
+  function startMarquee(event) {
+    const world = tree.clientToWorld(event.clientX, event.clientY);
+    const rectEl = document.createElementNS(SVG_NS, "rect");
+    rectEl.setAttribute("id", "marquee-rect");
+    rectEl.setAttribute("fill", "rgba(120, 170, 255, 0.12)");
+    rectEl.setAttribute("stroke", "#7aaaff");
+    rectEl.setAttribute("stroke-dasharray", "6 4");
+    rectEl.setAttribute("vector-effect", "non-scaling-stroke");
+    rectEl.setAttribute("pointer-events", "none");
+    tree.edgesLayer.appendChild(rectEl);
+    marquee = {
+      startWorld: world,
+      rectEl,
+      additive: event.shiftKey,
+      baseSelection: event.shiftKey ? new Set(selectedIds) : new Set(),
+    };
+    body.dataset.suppressPan = "1";
+  }
+
+  function updateMarquee(event) {
+    if (!marquee) return;
+    const cur = tree.clientToWorld(event.clientX, event.clientY);
+    const x1 = Math.min(marquee.startWorld.x, cur.x);
+    const y1 = Math.min(marquee.startWorld.y, cur.y);
+    const x2 = Math.max(marquee.startWorld.x, cur.x);
+    const y2 = Math.max(marquee.startWorld.y, cur.y);
+    marquee.rectEl.setAttribute("x", String(x1));
+    marquee.rectEl.setAttribute("y", String(y1));
+    marquee.rectEl.setAttribute("width", String(x2 - x1));
+    marquee.rectEl.setAttribute("height", String(y2 - y1));
+
+    const next = new Set(marquee.baseSelection);
+    for (const skill of tree.getSkills()) {
+      if (
+        typeof skill.x === "number" &&
+        typeof skill.y === "number" &&
+        skill.x >= x1 &&
+        skill.x <= x2 &&
+        skill.y >= y1 &&
+        skill.y <= y2
+      ) {
+        next.add(skill.id);
+      }
+    }
+    for (const id of [...selectedIds]) {
+      if (!next.has(id)) removeFromSelection(id);
+    }
+    for (const id of next) {
+      if (!selectedIds.has(id)) addToSelection(id);
+    }
+    if (!anchorId && selectedIds.size > 0) {
+      anchorId = [...selectedIds][selectedIds.size - 1];
+    }
+    updatePanelForSelection();
+  }
+
+  function endMarquee(silent = false) {
+    if (!marquee) return;
+    if (marquee.rectEl && marquee.rectEl.parentNode) {
+      marquee.rectEl.parentNode.removeChild(marquee.rectEl);
+    }
+    marquee = null;
+    delete body.dataset.suppressPan;
+    if (!silent) suppressNextClick = true;
+  }
+
   // ---------- Drag ----------
 
   tree.svg.addEventListener("mousedown", (event) => {
     if (!editing) return;
     if (event.button !== 0) return;
+
     const node = event.target.closest(".node");
-    if (!node) return;
+
+    if (!node) {
+      // Empty background. Shift = marquee select; otherwise let pan handle it.
+      if (event.shiftKey) {
+        event.stopPropagation();
+        event.preventDefault();
+        startMarquee(event);
+      }
+      return;
+    }
 
     const id = node.getAttribute("data-id");
     const skill = tree.getSkillById(id);
@@ -208,19 +402,44 @@ function initEditor() {
     event.preventDefault();
     body.dataset.suppressPan = "1";
 
+    // Shift on a node: leave selection change to the click handler (toggle),
+    // do not start a drag.
+    if (event.shiftKey) return;
+
+    // If clicking a node that isn't part of the current selection, replace
+    // the selection with just this one before dragging. If it IS already
+    // selected, keep the whole group and drag everything together.
+    if (!selectedIds.has(id)) {
+      selectOnly(id);
+    } else if (selectedIds.size === 1) {
+      // Single existing selection — refresh anchor / panel.
+      anchorId = id;
+      updatePanelForSelection();
+    }
+
     const world = tree.clientToWorld(event.clientX, event.clientY);
+    const ids = [...selectedIds];
+    const offsets = new Map();
+    for (const sid of ids) {
+      const s = tree.getSkillById(sid);
+      if (!s) continue;
+      offsets.set(sid, { ox: s.x - world.x, oy: s.y - world.y });
+    }
+
     dragging = {
-      id,
+      ids,
+      offsets,
       started: false,
       startX: event.clientX,
       startY: event.clientY,
-      offsetX: skill.x - world.x,
-      offsetY: skill.y - world.y,
     };
-    selectNode(id);
   });
 
   window.addEventListener("mousemove", (event) => {
+    if (marquee) {
+      updateMarquee(event);
+      return;
+    }
     if (!dragging) return;
     const dx = event.clientX - dragging.startX;
     const dy = event.clientY - dragging.startY;
@@ -228,39 +447,46 @@ function initEditor() {
     dragging.started = true;
 
     const world = tree.clientToWorld(event.clientX, event.clientY);
-    moveNodeTo(
-      dragging.id,
-      Math.round(world.x + dragging.offsetX),
-      Math.round(world.y + dragging.offsetY)
-    );
+    for (const sid of dragging.ids) {
+      const off = dragging.offsets.get(sid);
+      if (!off) continue;
+      moveNodeTo(
+        sid,
+        Math.round(world.x + off.ox),
+        Math.round(world.y + off.oy)
+      );
+    }
   });
 
   window.addEventListener("mouseup", () => {
+    if (marquee) {
+      endMarquee();
+      return;
+    }
     if (!dragging) return;
-    const id = dragging.id;
+    const ids = dragging.ids;
     const wasDrag = dragging.started;
     dragging = null;
     delete body.dataset.suppressPan;
     if (wasDrag) suppressNextClick = true;
 
     if (wasDrag) {
-      const skill = tree.getSkillById(id);
-      if (skill) {
-        if (isAddedId(id)) {
-          const stored = tree
-            .getEditState()
-            .added.find((s) => s.id === id);
+      for (const sid of ids) {
+        const skill = tree.getSkillById(sid);
+        if (!skill) continue;
+        if (isAddedId(sid)) {
+          const stored = tree.getEditState().added.find((s) => s.id === sid);
           if (stored) {
             stored.x = skill.x;
             stored.y = skill.y;
             tree.addNode(stored);
           }
         } else {
-          tree.setOverride(id, { x: skill.x, y: skill.y });
+          tree.setOverride(sid, { x: skill.x, y: skill.y });
         }
-        fillPanel(id);
-        scheduleSave();
       }
+      if (anchorId && selectedIds.has(anchorId)) fillPanel(anchorId);
+      scheduleSave();
     }
   });
 
@@ -270,7 +496,7 @@ function initEditor() {
     skill.x = x;
     skill.y = y;
 
-    const g = tree.nodesLayer.querySelector(`[data-id="${cssEscape(id)}"]`);
+    const g = nodeElement(id);
     if (g) {
       const circle = g.querySelector("circle");
       const text = g.querySelector("text");
@@ -315,7 +541,7 @@ function initEditor() {
       });
     });
 
-    if (selectedId === id) {
+    if (anchorId === id && selectedIds.size === 1) {
       inputX.value = String(x);
       inputY.value = String(y);
     }
@@ -328,10 +554,8 @@ function initEditor() {
     requestAnimationFrame(() => {
       redrawScheduled = false;
       tree.redraw();
-      if (selectedId) {
-        const node = tree.nodesLayer.querySelector(
-          `[data-id="${cssEscape(selectedId)}"]`
-        );
+      for (const id of selectedIds) {
+        const node = nodeElement(id);
         if (node) node.classList.add("is-selected");
       }
     });
@@ -365,19 +589,15 @@ function initEditor() {
 
     if (connectMode) {
       if (!node) {
-        // Click on background: clear source, stay in connect mode
         clearConnectSource();
         return;
       }
       const id = node.getAttribute("data-id");
       if (!connectSource) {
-        // First click: set source
         setConnectSource(id);
       } else if (id === connectSource) {
-        // Click on the same node: deselect source
         clearConnectSource();
       } else {
-        // Second click on a different node: toggle edge
         if (tree.hasEdge(connectSource, id)) {
           tree.removeEdge(connectSource, id);
         } else {
@@ -387,7 +607,6 @@ function initEditor() {
         clearConnectSource();
         removePreviewLine();
         tree.redraw();
-        // Re-highlight source (stays selected for chaining)
         setConnectSource(prevSource);
         scheduleSave();
       }
@@ -398,7 +617,12 @@ function initEditor() {
       clearSelection();
       return;
     }
-    selectNode(node.getAttribute("data-id"));
+    const id = node.getAttribute("data-id");
+    if (event.shiftKey) {
+      toggleSelection(id);
+    } else {
+      selectOnly(id);
+    }
   });
 
   // Preview line follows mouse while in connect mode with a source selected
@@ -421,25 +645,58 @@ function initEditor() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "e" || event.key === "E") {
-      const t = event.target;
-      if (
-        t &&
-        (t.tagName === "INPUT" ||
-          t.tagName === "TEXTAREA" ||
-          t.tagName === "SELECT" ||
-          t.isContentEditable)
-      ) {
-        return;
-      }
+      if (isTypingTarget(event.target)) return;
       event.preventDefault();
       setEditing(!editing);
+      return;
     }
     if (event.key === "Escape") {
-      if (connectMode) {
+      if (marquee) {
+        endMarquee(true);
+      } else if (connectMode) {
         setConnectMode(false);
       } else {
         clearSelection();
       }
+      return;
+    }
+    if (!editing) return;
+    const typing = isTypingTarget(event.target);
+    if ((event.ctrlKey || event.metaKey) && (event.key === "c" || event.key === "C")) {
+      if (typing) return; // let the browser copy text
+      if (selectedIds.size === 0) return;
+      event.preventDefault();
+      copySelection();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === "v" || event.key === "V")) {
+      if (typing) return; // let the browser paste text
+      if (clipboard.length === 0) return;
+      event.preventDefault();
+      pasteClipboard();
+      return;
+    }
+    if (event.key === "F2") {
+      if (typing) return;
+      if (selectedIds.size !== 1) return;
+      event.preventDefault();
+      beginRenameSelected();
+      return;
+    }
+    if (event.key === "Delete" || event.key === "Backspace") {
+      if (typing) return;
+      if (selectedIds.size === 0) return;
+      event.preventDefault();
+      for (const id of [...selectedIds]) {
+        if (isAddedId(id)) {
+          tree.removeAdded(id);
+        } else if (isFromBase(id)) {
+          tree.markDeleted(id);
+        }
+      }
+      clearSelection();
+      tree.redraw();
+      scheduleSave();
     }
   });
 
@@ -464,28 +721,28 @@ function initEditor() {
     };
     tree.addNode(node);
     tree.redraw();
-    selectNode(id);
+    selectOnly(id);
     scheduleSave();
   });
 
   // ---------- Side panel inputs ----------
 
   inputLabel.addEventListener("input", () => {
-    if (!selectedId) return;
-    applyMetadataEdit(selectedId, { label: inputLabel.value });
+    if (!anchorId) return;
+    applyMetadataEdit(anchorId, { label: inputLabel.value });
   });
   inputBranch.addEventListener("change", () => {
-    if (!selectedId) return;
+    if (!anchorId) return;
     lastBranch = inputBranch.value;
-    applyMetadataEdit(selectedId, { branch: inputBranch.value });
+    applyMetadataEdit(anchorId, { branch: inputBranch.value });
   });
   inputKind.addEventListener("change", () => {
-    if (!selectedId) return;
-    applyMetadataEdit(selectedId, { kind: inputKind.value });
+    if (!anchorId) return;
+    applyMetadataEdit(anchorId, { kind: inputKind.value });
   });
   inputDesc.addEventListener("input", () => {
-    if (!selectedId) return;
-    applyMetadataEdit(selectedId, { desc: inputDesc.value });
+    if (!anchorId) return;
+    applyMetadataEdit(anchorId, { desc: inputDesc.value });
   });
 
   function applyMetadataEdit(id, patch) {
@@ -499,10 +756,8 @@ function initEditor() {
       tree.setOverride(id, patch);
     }
     tree.redraw();
-    if (selectedId) {
-      const node = tree.nodesLayer.querySelector(
-        `[data-id="${cssEscape(selectedId)}"]`
-      );
+    for (const sid of selectedIds) {
+      const node = nodeElement(sid);
       if (node) node.classList.add("is-selected");
     }
     fillPanel(id);
@@ -512,12 +767,19 @@ function initEditor() {
   panelClose.addEventListener("click", clearSelection);
 
   deleteBtn.addEventListener("click", () => {
-    if (!selectedId) return;
-    if (!confirm(`Delete "${selectedId}"?`)) return;
-    if (isAddedId(selectedId)) {
-      tree.removeAdded(selectedId);
-    } else if (isFromBase(selectedId)) {
-      tree.markDeleted(selectedId);
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const label =
+      ids.length === 1
+        ? `"${ids[0]}"`
+        : `${ids.length} selected nodes`;
+    if (!confirm(`Delete ${label}?`)) return;
+    for (const id of ids) {
+      if (isAddedId(id)) {
+        tree.removeAdded(id);
+      } else if (isFromBase(id)) {
+        tree.markDeleted(id);
+      }
     }
     clearSelection();
     tree.redraw();
@@ -525,16 +787,32 @@ function initEditor() {
   });
 
   revertBtn.addEventListener("click", () => {
-    if (!selectedId) return;
-    if (isAddedId(selectedId)) {
-      tree.removeAdded(selectedId);
-      clearSelection();
-    } else {
-      tree.clearOverride(selectedId);
-      tree.unmarkDeleted(selectedId);
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    for (const id of ids) {
+      if (isAddedId(id)) {
+        tree.removeAdded(id);
+      } else {
+        tree.clearOverride(id);
+        tree.unmarkDeleted(id);
+      }
+    }
+    // Drop any selected ids that no longer exist after revert (added removals).
+    for (const id of [...selectedIds]) {
+      if (!tree.getSkillById(id)) {
+        selectedIds.delete(id);
+        if (anchorId === id) anchorId = null;
+      }
     }
     tree.redraw();
-    if (selectedId) fillPanel(selectedId);
+    for (const id of selectedIds) {
+      const node = nodeElement(id);
+      if (node) node.classList.add("is-selected");
+    }
+    if (!anchorId && selectedIds.size > 0) {
+      anchorId = [...selectedIds][selectedIds.size - 1];
+    }
+    updatePanelForSelection();
     scheduleSave();
   });
 
@@ -651,6 +929,9 @@ function initEditor() {
       lines.push(`    x: ${Math.round(node.x ?? 0)},`);
       lines.push(`    y: ${Math.round(node.y ?? 0)},`);
       lines.push(`    desc: ${JSON.stringify(node.desc ?? "")},`);
+      if (node.domains && Object.keys(node.domains).length > 0) {
+        lines.push(`    domains: ${JSON.stringify(node.domains)},`);
+      }
       lines.push("  },");
     }
     lines.push("];", "");
