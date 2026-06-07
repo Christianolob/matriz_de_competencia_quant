@@ -628,7 +628,10 @@ function attachPanZoom() {
     svg.classList.remove("is-panning");
   });
 
-  svg.addEventListener("dblclick", () => {
+  svg.addEventListener("dblclick", (event) => {
+    // Double-clicking a node is handled by the editor (open + rename); only a
+    // double-click on empty space resets the view.
+    if (event.target.closest(".node")) return;
     view.x = 0;
     view.y = 0;
     view.w = WORLD.w;

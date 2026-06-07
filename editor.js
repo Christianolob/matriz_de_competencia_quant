@@ -678,6 +678,20 @@ function initEditor() {
     }
   });
 
+  // Double-click a node: open the (enlarged) editor panel and jump straight
+  // into the name field, ready to type. Single click keeps select/move.
+  tree.svg.addEventListener("dblclick", (event) => {
+    if (!editing || connectMode) return;
+    const node = event.target.closest(".node");
+    if (!node) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const id = node.getAttribute("data-id");
+    if (!tree.getSkillById(id)) return;
+    selectOnly(id);
+    beginRenameSelected();
+  });
+
   // Preview line follows mouse while in connect mode with a source selected
   tree.svg.addEventListener("mousemove", (event) => {
     if (!connectMode || !connectSource) return;
