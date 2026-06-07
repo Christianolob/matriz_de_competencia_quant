@@ -38,6 +38,8 @@ Double-click `run.bat`, or run `python server.py 8000`. The script opens the bro
 
 Relationships are defined in `data/relationships.js`. The graph is no longer a star: each outer point connects to nearby next steps, and only selected bridge skills feed cross-branch nodes near the center.
 
+For a guided tour of the **paths between the bigger circles** (which trilhas connect which roots/hubs/cross nodes), see [CAMINHOS.md](CAMINHOS.md).
+
 Positions are computed by `data/layout.js` (planar wedges, no crossing straight edges) and then the contents of `data/overrides.js` (overrides + added + deleted) are layered on top.
 
 ## Skill kinds
