@@ -543,6 +543,7 @@ body.is-editing .tooltip {
 .editor-panel__body {
   padding: 15px 18px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -573,6 +574,9 @@ body.is-editing .tooltip {
   padding: 6px 12px;
   resize: vertical;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .editor-field input:focus,
@@ -597,7 +601,7 @@ body.is-editing .tooltip {
 
 .editor-field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 9px;
 }
 
