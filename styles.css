@@ -506,9 +506,9 @@ body.is-editing .tooltip {
   top: 0;
   right: 0;
   height: 100vh;
-  width: 110px;
-  max-width: 8vw;
-  min-width: 100px;
+  width: 330px;
+  max-width: 24vw;
+  min-width: 300px;
   background: rgba(20, 18, 36, 0.96);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.45);
@@ -528,31 +528,32 @@ body.is-editing .tooltip {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 6px;
+  padding: 12px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .editor-panel__header h2 {
   margin: 0;
-  font-size: 9px;
+  font-size: 24px;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .editor-panel__body {
-  padding: 5px 6px;
+  padding: 15px 18px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
 }
 
 .editor-field {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  font-size: 8px;
+  gap: 3px;
+  font-size: 22px;
   color: var(--text-muted);
 }
 
@@ -565,14 +566,17 @@ body.is-editing .tooltip {
 .editor-field select,
 .editor-field textarea {
   font: inherit;
-  font-size: 9px;
+  font-size: 22px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  padding: 2px 4px;
+  border-radius: 8px;
+  padding: 6px 12px;
   resize: vertical;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .editor-field input:focus,
@@ -582,6 +586,14 @@ body.is-editing .tooltip {
   border-color: rgba(59, 130, 246, 0.6);
 }
 
+/* The native dropdown popup ignores the translucent select background and
+   falls back to the OS default (white). Without an opaque color here the
+   light option text renders white-on-white. */
+.editor-field select option {
+  background-color: #1a1530;
+  color: var(--text-primary);
+}
+
 .editor-field input[readonly] {
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.02);
@@ -589,21 +601,21 @@ body.is-editing .tooltip {
 
 .editor-field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3px;
+  grid-template-columns: 1fr;
+  gap: 9px;
 }
 
 .editor-panel__actions {
   display: flex;
   justify-content: space-between;
-  gap: 3px;
-  margin-top: 3px;
+  gap: 9px;
+  margin-top: 9px;
   flex-wrap: wrap;
 }
 
 .editor-panel__actions button {
-  font-size: 9px;
-  padding: 2px 4px;
+  font-size: 18px;
+  padding: 6px 12px;
 }
 
 /* Save error banner (top-center, only shown when auto-save fails) */

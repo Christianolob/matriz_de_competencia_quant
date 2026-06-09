@@ -65,6 +65,7 @@ function initEditor() {
   let lastBranch = "modeling";
   let suppressNextClick = false;
   let clipboard = []; // snapshots from the last Ctrl+C, positioned relative to the first item
+  const undoStack = []; // edit-state snapshots; Ctrl+Z pops and restores the last one
 
   // Connect mode state
   let connectMode = false;
@@ -179,6 +180,53 @@ function initEditor() {
     return String(s).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
   }
 
+  // ---------- Undo ----------
+
+  function snapshotState() {
+    const st = tree.getEditState();
+    const snap = {
+      overrides: JSON.parse(JSON.stringify(st.overrides ?? {})),
+      added: JSON.parse(JSON.stringify(st.added ?? [])),
+      deleted: [...(st.deleted ?? [])],
+      addedEdges: JSON.parse(JSON.stringify(st.addedEdges ?? [])),
+      deletedEdges: JSON.parse(JSON.stringify(st.deletedEdges ?? [])),
+    };
+    snap.__json = JSON.stringify(snap);
+    return snap;
+  }
+
+  // Capture the current state BEFORE a mutation, so Ctrl+Z can return to it.
+  // Consecutive identical snapshots (e.g. focusing a field without typing)
+  // are skipped so undo never appears to do nothing.
+  function pushUndo() {
+    const snap = snapshotState();
+    const top = undoStack[undoStack.length - 1];
+    if (top && top.__json === snap.__json) return;
+    undoStack.push(snap);
+    if (undoStack.length > 100) undoStack.shift();
+  }
+
+  function restoreState(snap) {
+    const st = tree.getEditState();
+    // Mutate the live editState object in place; main.js holds this reference.
+    st.overrides = JSON.parse(JSON.stringify(snap.overrides));
+    st.added = JSON.parse(JSON.stringify(snap.added));
+    st.deleted = [...snap.deleted];
+    st.addedEdges = JSON.parse(JSON.stringify(snap.addedEdges));
+    st.deletedEdges = JSON.parse(JSON.stringify(snap.deletedEdges));
+  }
+
+  function undo() {
+    if (undoStack.length === 0) return;
+    const snap = undoStack.pop();
+    restoreState(snap);
+    clearConnectSource();
+    removePreviewLine();
+    clearSelection();
+    tree.redraw();
+    scheduleSave();
+  }
+
   // ---------- Copy / paste / rename ----------
 
   function isTypingTarget(t) {
@@ -211,6 +259,7 @@ function initEditor() {
 
   function pasteClipboard() {
     if (clipboard.length === 0) return;
+    pushUndo();
     const center = tree.viewportCenterWorld();
     const newIds = [];
     for (const entry of clipboard) {
@@ -471,6 +520,7 @@ function initEditor() {
     if (wasDrag) suppressNextClick = true;
 
     if (wasDrag) {
+      pushUndo();
       for (const sid of ids) {
         const skill = tree.getSkillById(sid);
         if (!skill) continue;
@@ -578,6 +628,7 @@ function initEditor() {
       const from = clickedEdge.getAttribute("data-from");
       const to = clickedEdge.getAttribute("data-to");
       if (from && to) {
+        pushUndo();
         tree.removeEdge(from, to);
         clearConnectSource();
         removePreviewLine();
@@ -598,16 +649,18 @@ function initEditor() {
       } else if (id === connectSource) {
         clearConnectSource();
       } else {
+        pushUndo();
         if (tree.hasEdge(connectSource, id)) {
           tree.removeEdge(connectSource, id);
         } else {
           tree.addEdge(connectSource, id);
         }
-        const prevSource = connectSource;
         clearConnectSource();
         removePreviewLine();
         tree.redraw();
-        setConnectSource(prevSource);
+        // Chain connections: the node just connected to (the second click)
+        // becomes the source for the next edge, so A->B->C->... is fast.
+        setConnectSource(id);
         scheduleSave();
       }
       return;
@@ -623,6 +676,20 @@ function initEditor() {
     } else {
       selectOnly(id);
     }
+  });
+
+  // Double-click a node: open the (enlarged) editor panel and jump straight
+  // into the name field, ready to type. Single click keeps select/move.
+  tree.svg.addEventListener("dblclick", (event) => {
+    if (!editing || connectMode) return;
+    const node = event.target.closest(".node");
+    if (!node) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const id = node.getAttribute("data-id");
+    if (!tree.getSkillById(id)) return;
+    selectOnly(id);
+    beginRenameSelected();
   });
 
   // Preview line follows mouse while in connect mode with a source selected
@@ -662,6 +729,16 @@ function initEditor() {
     }
     if (!editing) return;
     const typing = isTypingTarget(event.target);
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      !event.shiftKey &&
+      (event.key === "z" || event.key === "Z")
+    ) {
+      if (typing) return; // let the browser undo text inside inputs
+      event.preventDefault();
+      undo();
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && (event.key === "c" || event.key === "C")) {
       if (typing) return; // let the browser copy text
       if (selectedIds.size === 0) return;
@@ -687,6 +764,7 @@ function initEditor() {
       if (typing) return;
       if (selectedIds.size === 0) return;
       event.preventDefault();
+      pushUndo();
       for (const id of [...selectedIds]) {
         if (isAddedId(id)) {
           tree.removeAdded(id);
@@ -702,6 +780,7 @@ function initEditor() {
 
   addBtn.addEventListener("click", () => {
     if (!editing) return;
+    pushUndo();
     const center = tree.viewportCenterWorld();
     const branch = lastBranch;
     let n = 1;
@@ -745,6 +824,14 @@ function initEditor() {
     applyMetadataEdit(anchorId, { desc: inputDesc.value });
   });
 
+  // Snapshot the pre-edit state once when a metadata field gains focus, so a
+  // whole edit (label/desc typing, branch/kind change) is a single undo step.
+  for (const input of [inputLabel, inputBranch, inputKind, inputDesc]) {
+    input.addEventListener("focus", () => {
+      if (editing && anchorId) pushUndo();
+    });
+  }
+
   function applyMetadataEdit(id, patch) {
     if (isAddedId(id)) {
       const stored = tree.getEditState().added.find((s) => s.id === id);
@@ -774,6 +861,7 @@ function initEditor() {
         ? `"${ids[0]}"`
         : `${ids.length} selected nodes`;
     if (!confirm(`Delete ${label}?`)) return;
+    pushUndo();
     for (const id of ids) {
       if (isAddedId(id)) {
         tree.removeAdded(id);
@@ -788,6 +876,7 @@ function initEditor() {
 
   revertBtn.addEventListener("click", () => {
     if (selectedIds.size === 0) return;
+    pushUndo();
     const ids = [...selectedIds];
     for (const id of ids) {
       if (isAddedId(id)) {
