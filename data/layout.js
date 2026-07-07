@@ -183,7 +183,7 @@ function polar(r, deg) {
   const rad = (deg * Math.PI) / 180;
   return {
     x: Math.round(CX + r * Math.cos(rad)),
-    y: Math.round(CY - r * Math.sin(rad)),
+    y: Math.round(CY + r * Math.sin(rad)),
   };
 }
 
