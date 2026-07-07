@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quant Competence Matrix — Export</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /*
+        Lock the layout to a fixed 2400x1800 box (the SVG viewBox size) instead
+        of the viewport-relative 100vw/100vh used by index.html. In headless
+        capture, 100vh can resolve to less than the screenshot surface, leaving
+        a blank band. Fixed pixels guarantee the dark canvas fills the frame.
+      */
+      html,
+      body {
+        width: 2400px;
+        height: 1800px;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      .canvas-wrap,
+      #tree {
+        width: 2400px;
+        height: 1800px;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Minimal, chrome-free page used only for high-resolution image export
+      (see export_image.bat). Reuses the same SVG structure, styles.css and
+      main.js as index.html, but drops the title, editor toolbar and panel so
+      the screenshot contains only the skill tree.
+    -->
+    <main class="canvas-wrap">
+      <svg
+        id="tree"
+        viewBox="0 0 2400 1800"
+        preserveAspectRatio="xMidYMid meet"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="Quant skill tree"
+      >
+        <defs id="defs-layer"></defs>
+        <g id="background-layer"></g>
+        <g id="edges-layer"></g>
+        <g id="nodes-layer"></g>
+      </svg>
+
+      <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

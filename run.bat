@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 
-set "PORT=8000"
+set "PORT=8002"
 
 echo ===============================================
 echo  Quant Competence Matrix

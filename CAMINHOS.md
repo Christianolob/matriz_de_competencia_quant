@@ -21,7 +21,7 @@ O tamanho do círculo vem do `kind` do nó ([main.js](main.js) → `getRadius`):
 
 ---
 
-## 🟢 Modeling (verde)
+## [GREEN] Modeling (verde)
 
 - **Modeling** (root) → **Statistics** (hub) → **Descritivas** (cross)
   *Trilha de estatística descritiva: Média → Mediana → … → Assimetria & Curtose.*
@@ -34,7 +34,7 @@ O tamanho do círculo vem do `kind` do nó ([main.js](main.js) → `getRadius`):
 
 ---
 
-## 🔵 Technology (azul)
+## [BLUE] Technology (azul)
 
 - **Technology** (root) → **Cloud**, **Backend**, **DevOps** (hubs).
 - **Backend** (hub) → **Fundamentos de Programação** (hub)
@@ -48,7 +48,7 @@ O tamanho do círculo vem do `kind` do nó ([main.js](main.js) → `getRadius`):
 
 ---
 
-## 🔴 Finance (vermelho)
+## [RED] Finance (vermelho)
 
 - **Finance** (apex) → **Macroeconomia** (root) e **Accounting** (root).
 

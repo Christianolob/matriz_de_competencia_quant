@@ -10,9 +10,9 @@ RPG-style **circular** skill tree for quant career competencies. Three branches 
 
 ## How to open
 
-Double-click `run.bat`, or run `python server.py 8000`. The script opens the browser at `http://localhost:8000/` automatically.
+Double-click `run.bat`, or run `python server.py 8002`. The script opens the browser at `http://localhost:8002/` automatically.
 
-`run.bat` launches `server.py`, a small local server that both serves the static files and accepts auto-save writes to `data/overrides.js` from the in-app editor. If port 8000 is already taken (e.g. you opened the .bat twice), the server tries 8001..8009 and prints which one it ended up on.
+`run.bat` launches `server.py`, a small local server that both serves the static files and accepts auto-save writes to `data/overrides.js` from the in-app editor. If port 8002 is already taken (e.g. you opened the .bat twice), the server tries 8003..8011 and prints which one it ended up on.
 
 ## Structure
 

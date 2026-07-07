@@ -143,7 +143,7 @@ def find_open_server(host, start_port, attempts=10):
 
 
 def main():
-    requested_port = 8000
+    requested_port = 8002
     if len(sys.argv) > 1:
         try:
             requested_port = int(sys.argv[1])
