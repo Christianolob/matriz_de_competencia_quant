@@ -59,6 +59,12 @@ def find_browser():
 # ---------------------------------------------------------------------------
 
 class _QuietHandler(SimpleHTTPRequestHandler):
+    # Keep-alive lets the browser reuse one connection for the whole module
+    # graph (export.html + main.js + its imports) instead of opening a burst
+    # of short-lived ones, shrinking the window in which a connection abort
+    # can drop a file main.js needs to run.
+    protocol_version = "HTTP/1.1"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
@@ -66,8 +72,18 @@ class _QuietHandler(SimpleHTTPRequestHandler):
         pass
 
 
+class _QuietServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        # The headless browser routinely resets speculative / keep-alive
+        # sockets; those surface as ConnectionError in the worker thread.
+        # Swallow them instead of dumping a traceback to stderr.
+        pass
+
+
 def start_server():
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), _QuietHandler)
+    httpd = _QuietServer(("127.0.0.1", 0), _QuietHandler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd, port
@@ -238,12 +254,12 @@ def main() -> int:
             "Emulation.setDeviceMetricsOverride",
             {"width": WORLD_W, "height": WORLD_H, "deviceScaleFactor": 1, "mobile": False},
         )
-        cdp.call("Page.navigate", {"url": url})
-
-        # Wait until the tree has actually been drawn into the SVG.
-        print("Aguardando renderizacao da arvore...")
-        ready = False
-        for _ in range(300):  # up to ~30s
+        # Wait until the tree has actually been drawn into the SVG. On a cold
+        # headless start the browser occasionally aborts one of the ES-module
+        # fetches mid-flight, so main.js never runs and the SVG stays empty --
+        # which is exactly what produced the blank (white) export. A reload
+        # reliably fixes it, so re-navigate a few times before giving up.
+        def tree_ready():
             result = cdp.call(
                 "Runtime.evaluate",
                 {
@@ -254,10 +270,20 @@ def main() -> int:
                     "returnByValue": True,
                 },
             )
-            if (result.get("result", {}).get("value") or 0) > 0:
-                ready = True
+            return (result.get("result", {}).get("value") or 0) > 0
+
+        print("Aguardando renderizacao da arvore...")
+        ready = False
+        for attempt in range(5):
+            cdp.call("Page.navigate", {"url": url})
+            for _ in range(60):  # up to ~6s per attempt
+                if tree_ready():
+                    ready = True
+                    break
+                time.sleep(0.1)
+            if ready:
                 break
-            time.sleep(0.1)
+            print(f"  Arvore vazia; recarregando (tentativa {attempt + 2}/5)...")
         if not ready:
             print("[ERRO] A arvore nao renderizou a tempo.", file=sys.stderr)
             return 1
