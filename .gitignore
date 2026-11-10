@@ -1,0 +1,5 @@
+# Empresas Quant BR: arquivos gerados
+empresas_quant/data/empresas.json
+empresas_quant/data/cache/
+__pycache__/
+*.part

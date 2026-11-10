@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Empresas Quant BR</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <h1>Empresas Quant BR</h1>
+        <p class="sub" id="meta">carregando…</p>
+      </div>
+      <button id="export" type="button" class="btn">Exportar CSV</button>
+    </header>
+
+    <div id="errors" class="banner" hidden></div>
+
+    <details id="reco" class="reco" open>
+      <summary>Recomendação: maiores empresas para aplicar</summary>
+      <p class="reco-sub">
+        Ordem sugerida de prioridade e quantas empresas (as maiores de cada categoria) vale a pena cobrir.
+        Clique numa categoria para ver só ela. <button id="reco-all" type="button" class="linklike">Ver todas as recomendadas</button>
+      </p>
+      <ol id="reco-list" class="reco-list"></ol>
+    </details>
+
+    <section class="controls">
+      <div id="chips" class="chips" role="group" aria-label="Categorias"></div>
+      <div class="row">
+        <input id="search" type="search" placeholder="Buscar nome, CNPJ, cidade, conglomerado…" />
+        <label>Mostrar
+          <select id="topn">
+            <option value="auto" selected>padrão (curado)</option>
+            <option value="25">top 25</option>
+            <option value="50">top 50</option>
+            <option value="100">top 100</option>
+            <option value="0">todas</option>
+          </select>
+          por categoria
+        </label>
+        <label class="check"><input id="indep" type="checkbox" /> só gestoras independentes</label>
+        <label>Status
+          <select id="status">
+            <option value="todas">todas</option>
+            <option value="aplicadas">aplicadas</option>
+            <option value="pendentes">não aplicadas</option>
+          </select>
+        </label>
+        <span id="count" class="count"></span>
+      </div>
+    </section>
+
+    <main class="table-wrap">
+      <table id="table">
+        <thead>
+          <tr>
+            <th>Aplicado</th>
+            <th data-key="rank" class="num">#</th>
+            <th data-key="nome">Empresa</th>
+            <th data-key="categoria">Categoria</th>
+            <th data-key="valor" class="num">R$ bi</th>
+            <th data-key="n_fundos" class="num">Fundos</th>
+            <th data-key="uf">UF</th>
+            <th>Links</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </main>
+
+    <footer class="foot">
+      <p class="mock-note">
+        <strong>Demonstração:</strong> a marcação "aplicado" é um mock sem integração — fica salva só neste navegador
+        (localStorage). <button id="reset-aplic" type="button" class="linklike">Limpar marcações</button>
+      </p>
+      Apenas empresas privadas (estatais removidas pelo controle público no BCB).
+      Bancos: ativo total do conglomerado prudencial (BCB IF.data). IPs, corretoras e financeiras: ativo total da instituição individual.
+      Gestoras: soma do PL das classes não exclusivas e não-FIC em funcionamento (CVM). Family offices / MFO: gestoras com ≥ 70% do PL em fundos exclusivos (heurística), pelo PL exclusivo. "Independente" é heurística (não ligada a banco/fundação).
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

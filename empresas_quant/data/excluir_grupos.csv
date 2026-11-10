@@ -1,0 +1,2 @@
+grupo,conglomerado_bcb,regex_nome,observacao
+Itaú,ITAU,\bITA[UÚ]\b|\bKINEA\b|\bAVENUE\b,"Conglomerado prudencial ITAU no BCB (Redecard, Itaú Corretora, Intrag, Ideal, Luizacred, Avenue...) + Itaú Asset, Kinea, Avenue (gestora) e cooperativa dos funcionários. \b evita 'Itaúna'."

@@ -1,0 +1,10 @@
+nome,categoria,site,observacao
+B3 S.A. - Brasil Bolsa Balcão,infraestrutura,https://www.b3.com.br,"Bolsa e clearing: risco, market data, precificação"
+Núclea (antiga CIP),infraestrutura,https://www.nuclea.com.br,"Infraestrutura de pagamentos e registro de recebíveis"
+CERC,infraestrutura,https://www.cerc.inf.br,Registradora de recebíveis
+ANBIMA,infraestrutura,https://www.anbima.com.br,"Preços/taxas de referência (curvas, IMA)"
+Porto Seguro,seguradora,https://www.portoseguro.com.br,"Atuária, pricing, modelos de risco"
+SulAmérica,seguradora,https://www.sulamerica.com.br,Atuária e risco
+Serasa Experian,dados_credito,https://www.serasaexperian.com.br,"Credit scoring, modelagem estatística"
+Quod,dados_credito,https://www.quod.com.br,"Bureau de crédito (cadastro positivo)"
+Creditas,fintech,https://www.creditas.com,"Crédito com garantia, modelagem de risco"
